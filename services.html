@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Vælg din kundetype, privat eller erhverv, og se de byggeydelser, der passer til dig hos Region Byg & Rådgivning." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <title data-i18n="meta.title.services">Tjenester, Region Byg & Rådgivning</title>
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
+  <link rel="mask-icon" href="assets/img/favicon.svg" color="#C8996A" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Region Byg & Rådgivning" />
+  <meta property="og:title" content="Tjenester, Region Byg & Rådgivning" />
+  <meta property="og:description" content="Vælg din kundetype, privat eller erhverv, og se de byggeydelser, der passer til dig hos Region Byg & Rådgivning." />
+  <meta property="og:image" content="https://regionbyg.dk/assets/img/banner.jpeg" />
+  <meta property="og:url" content="https://regionbyg.dk/services.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <script>try{if(localStorage.getItem('rb-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <div id="rb-header"></div>
+
+  <main>
+    <section class="section section--photo" style="padding-top:clamp(7rem,14vw,9rem)">
+      <img class="sec-bg" src="assets/img/home-plan.jpg" alt="" aria-hidden="true" />
+      <span class="sec-overlay"></span>
+      <div class="container">
+        <div class="section-head section-head--center" data-reveal>
+          <span class="eyebrow" data-i18n="choose.eyebrow"></span>
+          <h2 data-i18n="choose.title"></h2>
+          <p data-i18n="choose.lead"></p>
+        </div>
+
+        <div class="choose-grid">
+          <a class="choose-card" href="private.html" data-reveal data-delay="1">
+            <span class="choose-card__icon" data-icon="home"></span>
+            <h3 data-i18n="choose.private_title"></h3>
+            <p data-i18n="choose.private_desc"></p>
+            <span class="card__link"><span data-i18n="services.view"></span><span data-icon="arrow"></span></span>
+          </a>
+          <a class="choose-card" href="commercial.html" data-reveal data-delay="2">
+            <span class="choose-card__icon" data-icon="building"></span>
+            <h3 data-i18n="choose.commercial_title"></h3>
+            <p data-i18n="choose.commercial_desc"></p>
+            <span class="card__link"><span data-i18n="services.view"></span><span data-icon="arrow"></span></span>
+          </a>
+        </div>
+
+        <!-- Custom services pointer -->
+        <div class="cta-band" style="margin-top:clamp(2.5rem,5vw,3.5rem)" data-reveal>
+          <h2 style="font-size:clamp(1.5rem,4vw,2.1rem)" data-i18n="custom.title"></h2>
+          <p data-i18n="custom.body"></p>
+          <div class="hero__cta">
+            <a class="btn btn--ghost btn--lg" href="custom.html">
+              <span data-i18n="nav.custom"></span><span data-icon="arrow"></span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="rb-footer"></div>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

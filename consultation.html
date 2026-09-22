@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Book en konsultation med en specialist fra Region Byg & Rådgivning." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <title data-i18n="meta.title.consultation">Book en konsultation, Region Byg & Rådgivning</title>
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
+  <link rel="mask-icon" href="assets/img/favicon.svg" color="#C8996A" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Region Byg & Rådgivning" />
+  <meta property="og:title" content="Book en konsultation, Region Byg & Rådgivning" />
+  <meta property="og:description" content="Book en konsultation med en specialist fra Region Byg & Rådgivning." />
+  <meta property="og:image" content="https://regionbyg.dk/assets/img/banner.jpeg" />
+  <meta property="og:url" content="https://regionbyg.dk/consultation.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <script>try{if(localStorage.getItem('rb-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+
+  <div id="rb-header"></div>
+
+  <main>
+    <section class="section" style="padding-top:clamp(7rem,14vw,9rem)">
+      <div class="container">
+        <div class="wizard">
+          <div class="section-head" style="margin-bottom:2rem" data-reveal>
+            <span class="eyebrow" data-i18n="cons.eyebrow"></span>
+            <h2 data-i18n="cons.title"></h2>
+            <p data-i18n="cons.lead"></p>
+          </div>
+
+          <form id="consForm" class="form-shell" novalidate data-reveal>
+            <p class="hint" style="margin-bottom:1.4rem" data-i18n="form.required_note"></p>
+            <div class="grid-2">
+              <div class="field">
+                <label for="name"><span data-i18n="form.name"></span> <span class="req">*</span></label>
+                <input id="name" name="name" class="input" required data-validate="required" data-i18n-attr="placeholder:form.name_ph" autocomplete="name" />
+                <p class="error-msg" data-i18n="form.err_required"></p>
+              </div>
+              <div class="field">
+                <label for="email"><span data-i18n="form.email"></span> <span class="req">*</span></label>
+                <input id="email" name="email" type="email" class="input" required data-validate="email" data-i18n-attr="placeholder:form.email_ph" autocomplete="email" />
+                <p class="error-msg" data-i18n="form.err_email"></p>
+              </div>
+              <div class="field">
+                <label for="phone"><span data-i18n="form.phone"></span> <span class="req">*</span></label>
+                <input id="phone" name="phone" type="tel" class="input" required data-validate="required" data-i18n-attr="placeholder:form.phone_ph" autocomplete="tel" />
+                <p class="error-msg" data-i18n="form.err_required"></p>
+              </div>
+              <div class="field">
+                <label for="address"><span data-i18n="form.address"></span> <span class="req">*</span></label>
+                <input id="address" name="address" class="input" required data-validate="required" data-i18n-attr="placeholder:form.address_ph" autocomplete="street-address" />
+                <p class="error-msg" data-i18n="form.err_required"></p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="datetime"><span data-i18n="cons.date_label"></span> <span class="req">*</span></label>
+              <input id="datetime" name="datetime" type="datetime-local" class="input" required data-validate="required" />
+              <p class="error-msg" data-i18n="form.err_required"></p>
+            </div>
+
+            <div class="field">
+              <label for="notes" data-i18n="cons.notes_label"></label>
+              <textarea id="notes" name="notes" class="textarea" data-i18n-attr="placeholder:cons.notes_ph"></textarea>
+            </div>
+
+            <div class="field">
+              <label class="consent">
+                <input type="checkbox" name="consent" data-validate="checkbox" />
+                <span data-i18n-html="form.consent"></span>
+              </label>
+              <p class="error-msg" data-i18n="form.err_consent"></p>
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--block btn--lg" id="consSubmit" data-i18n="cons.submit"></button>
+          </form>
+
+          <div class="form-success form-shell" id="consSuccess">
+            <div class="form-success__icon"><span data-icon="checkCircle"></span></div>
+            <h3 data-i18n="cons.success_title"></h3>
+            <p data-i18n="cons.success_body"></p>
+
+            <div class="confirm-ref">
+              <small data-i18n="confirm.when_label"></small>
+              <strong id="consWhen"></strong>
+            </div>
+
+            <div data-confirm-contact></div>
+
+            <a class="btn btn--ghost" href="index.html" data-i18n="offer.success_home"></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="rb-footer"></div>
+
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/consultation.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Netlify config, serves the static site + the booking-notification function
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Friendly URL: POST /api/notify  ->  the function
+[[redirects]]
+  from = "/api/notify"
+  to = "/.netlify/functions/notify"
+  status = 200

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Anmod om et uforpligtende tilbud fra Region Byg & Rådgivning." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <title data-i18n="meta.title.offer">Anmod om tilbud, Region Byg & Rådgivning</title>
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
+  <link rel="mask-icon" href="assets/img/favicon.svg" color="#C8996A" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Region Byg & Rådgivning" />
+  <meta property="og:title" content="Anmod om tilbud, Region Byg & Rådgivning" />
+  <meta property="og:description" content="Anmod om et uforpligtende tilbud fra Region Byg & Rådgivning." />
+  <meta property="og:image" content="https://regionbyg.dk/assets/img/banner.jpeg" />
+  <meta property="og:url" content="https://regionbyg.dk/offer.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <script>try{if(localStorage.getItem('rb-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+
+  <div id="rb-header"></div>
+
+  <main>
+    <section class="section" style="padding-top:clamp(7rem,14vw,9rem)">
+      <div class="container">
+        <div class="wizard">
+
+          <div class="section-head" style="margin-bottom:2rem" data-reveal>
+            <span class="eyebrow" data-i18n="offer.eyebrow"></span>
+            <h2 data-i18n="offer.title"></h2>
+            <p data-i18n="offer.lead"></p>
+          </div>
+
+          <!-- SECTION 1: SELECTED SERVICE (auto-populated from ?service=) -->
+          <div class="selected-service" data-reveal>
+            <span data-icon="spark"></span>
+            <div>
+              <small data-i18n="offer.selected_label"></small>
+              <strong id="selectedService" data-i18n="offer.selected_default"></strong>
+            </div>
+          </div>
+
+          <form id="offerForm" class="form-shell" novalidate>
+            <!-- Progress -->
+            <div class="progress">
+              <div class="progress__bar"><div class="progress__fill" id="progressFill"></div></div>
+              <div class="progress__meta">
+                <span><span data-i18n="offer.step_of"></span> <strong id="stepNum">1</strong> <span data-i18n="offer.of"></span> <span id="stepTotal">6</span></span>
+                <span id="stepPct">17%</span>
+              </div>
+            </div>
+
+            <!-- STEP: client type (removed by JS when already known from the URL) -->
+            <fieldset class="step is-active" data-clientstep>
+              <h3 data-i18n="offer.ct_title"></h3>
+              <p data-i18n="offer.ct_desc"></p>
+              <div class="choices" data-validate="radio" data-field="clienttype">
+                <label class="choice"><input type="radio" name="clienttype" value="private" /><span data-i18n="choose.private_title"></span></label>
+                <label class="choice"><input type="radio" name="clienttype" value="commercial" /><span data-i18n="choose.commercial_title"></span></label>
+              </div>
+              <p class="error-msg" data-i18n="form.err_choice"></p>
+            </fieldset>
+
+            <!-- STEP 1, help needed -->
+            <fieldset class="step" data-step="1">
+              <h3 data-i18n="offer.s1_title"></h3>
+              <p data-i18n="offer.s1_desc"></p>
+              <div class="choices" data-validate="radio" data-field="help">
+                <label class="choice"><input type="radio" name="help" value="construction" /><span data-i18n="offer.help_construction"></span></label>
+                <label class="choice"><input type="radio" name="help" value="renovation" /><span data-i18n="offer.help_renovation"></span></label>
+                <label class="choice"><input type="radio" name="help" value="consulting" /><span data-i18n="offer.help_consulting"></span></label>
+                <label class="choice"><input type="radio" name="help" value="permit" /><span data-i18n="offer.help_permit"></span></label>
+                <label class="choice"><input type="radio" name="help" value="drawings" /><span data-i18n="offer.help_drawings"></span></label>
+                <label class="choice"><input type="radio" name="help" value="pm" /><span data-i18n="offer.help_pm"></span></label>
+                <label class="choice"><input type="radio" name="help" value="facility" /><span data-i18n="offer.help_facility"></span></label>
+                <label class="choice"><input type="radio" name="help" value="other" /><span data-i18n="offer.help_other"></span></label>
+              </div>
+              <p class="error-msg" data-i18n="form.err_choice"></p>
+            </fieldset>
+
+            <!-- STEP 2, description -->
+            <fieldset class="step" data-step="2">
+              <h3 data-i18n="offer.s2_title"></h3>
+              <p data-i18n="offer.s2_desc"></p>
+              <div class="field">
+                <label for="description"><span data-i18n="offer.desc_label"></span> <span class="req">*</span></label>
+                <textarea id="description" name="description" class="textarea" required
+                          data-validate="required" data-i18n-attr="placeholder:offer.desc_ph"></textarea>
+                <p class="error-msg" data-i18n="form.err_required"></p>
+              </div>
+            </fieldset>
+
+            <!-- STEP 3, budget + timeline -->
+            <fieldset class="step" data-step="3">
+              <h3 data-i18n="offer.s3_title"></h3>
+              <p data-i18n="offer.s3_desc"></p>
+              <div class="field">
+                <label for="budget"><span data-i18n="offer.budget_label"></span> <span class="req">*</span></label>
+                <input id="budget" name="budget" type="number" min="0" step="1000" class="input" required
+                       data-validate="required" data-i18n-attr="placeholder:offer.budget_ph" inputmode="numeric" />
+                <p class="error-msg" data-i18n="form.err_required"></p>
+              </div>
+              <div class="field">
+                <label data-i18n="offer.timeline_label"></label>
+                <div class="choices" data-validate="radio" data-field="timeline">
+                  <label class="choice"><input type="radio" name="timeline" value="urgent" /><span data-i18n="offer.tl_urgent"></span></label>
+                  <label class="choice"><input type="radio" name="timeline" value="2-4m" /><span data-i18n="offer.tl_24"></span></label>
+                  <label class="choice"><input type="radio" name="timeline" value="4m+" /><span data-i18n="offer.tl_4plus"></span></label>
+                  <label class="choice"><input type="radio" name="timeline" value="unsure" /><span data-i18n="offer.tl_unsure"></span></label>
+                </div>
+                <p class="error-msg" data-i18n="form.err_choice"></p>
+              </div>
+            </fieldset>
+
+            <!-- STEP 4, drawings + upload -->
+            <fieldset class="step" data-step="4">
+              <h3 data-i18n="offer.s4_title"></h3>
+              <p data-i18n="offer.s4_desc"></p>
+              <div class="choices" style="margin-bottom:1.4rem">
+                <label class="choice"><input type="checkbox" name="drawings" value="have" /><span data-i18n="offer.draw_have"></span></label>
+                <label class="choice"><input type="checkbox" name="drawings" value="upload" /><span data-i18n="offer.draw_upload"></span></label>
+                <label class="choice"><input type="checkbox" name="drawings" value="need_new" /><span data-i18n="offer.draw_need_new"></span></label>
+                <label class="choice"><input type="checkbox" name="drawings" value="need_viz" /><span data-i18n="offer.draw_need_viz"></span></label>
+                <label class="choice"><input type="checkbox" name="drawings" value="none" /><span data-i18n="offer.draw_none"></span></label>
+              </div>
+              <div class="field">
+                <label data-i18n="offer.upload_label"></label>
+                <label class="dropzone" id="dropzone">
+                  <span data-icon="upload"></span>
+                  <span data-i18n="offer.upload_hint"></span>
+                  <input type="file" id="fileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.dwg,.dxf,.doc,.docx" />
+                </label>
+                <p class="hint" style="margin-top:0.5rem" data-i18n="offer.upload_max"></p>
+                <ul class="file-list" id="fileList"></ul>
+              </div>
+            </fieldset>
+
+            <!-- STEP 5, additional info -->
+            <fieldset class="step" data-step="5">
+              <h3 data-i18n="offer.s5_title"></h3>
+              <p data-i18n="offer.s5_desc"></p>
+              <div class="field">
+                <label for="extra" data-i18n="offer.extra_label"></label>
+                <textarea id="extra" name="extra" class="textarea" data-i18n-attr="placeholder:offer.extra_ph"></textarea>
+              </div>
+            </fieldset>
+
+            <!-- STEP 6, contact -->
+            <fieldset class="step" data-step="6">
+              <h3 data-i18n="offer.s6_title"></h3>
+              <p data-i18n="offer.s6_desc"></p>
+              <p class="hint" style="margin-bottom:1.2rem" data-i18n="form.required_note"></p>
+              <div class="grid-2">
+                <div class="field">
+                  <label for="name"><span class="lbl-private" data-i18n="form.name"></span><span class="lbl-company" data-i18n="form.company"></span> <span class="req">*</span></label>
+                  <input id="name" name="name" class="input" required data-validate="required" autocomplete="name" />
+                  <p class="error-msg" data-i18n="form.err_required"></p>
+                </div>
+                <div class="field cvr-field">
+                  <label for="cvr"><span data-i18n="form.cvr_label"></span> <span class="req">*</span></label>
+                  <input id="cvr" name="cvr" class="input" data-validate="required" data-i18n-attr="placeholder:form.cvr_ph" inputmode="numeric" autocomplete="off" />
+                  <p class="error-msg" data-i18n="form.err_required"></p>
+                </div>
+                <div class="field">
+                  <label for="email"><span data-i18n="form.email"></span> <span class="req">*</span></label>
+                  <input id="email" name="email" type="email" class="input" required data-validate="email" data-i18n-attr="placeholder:form.email_ph" autocomplete="email" />
+                  <p class="error-msg" data-i18n="form.err_email"></p>
+                </div>
+                <div class="field">
+                  <label for="phone"><span data-i18n="form.phone"></span> <span class="req">*</span></label>
+                  <input id="phone" name="phone" type="tel" class="input" required data-validate="required" data-i18n-attr="placeholder:form.phone_ph" autocomplete="tel" />
+                  <p class="error-msg" data-i18n="form.err_required"></p>
+                </div>
+                <div class="field">
+                  <label for="address"><span data-i18n="form.address"></span> <span class="req">*</span></label>
+                  <input id="address" name="address" class="input" required data-validate="required" data-i18n-attr="placeholder:form.address_ph" autocomplete="street-address" />
+                  <p class="error-msg" data-i18n="form.err_required"></p>
+                </div>
+                <div class="field">
+                  <label for="city"><span data-i18n="form.city"></span> <span class="req">*</span></label>
+                  <input id="city" name="city" class="input" required data-validate="required" autocomplete="address-level2" />
+                  <p class="error-msg" data-i18n="form.err_required"></p>
+                </div>
+                <div class="field">
+                  <label for="postal"><span data-i18n="form.postal"></span> <span class="req">*</span></label>
+                  <input id="postal" name="postal" class="input" required data-validate="required" autocomplete="postal-code" inputmode="numeric" />
+                  <p class="error-msg" data-i18n="form.err_required"></p>
+                </div>
+              </div>
+
+              <div class="field" style="margin-top:1.4rem">
+                <label class="consent">
+                  <input type="checkbox" name="consent" data-validate="checkbox" />
+                  <span data-i18n-html="form.consent"></span>
+                </label>
+                <p class="error-msg" data-i18n="form.err_consent"></p>
+              </div>
+            </fieldset>
+
+            <!-- Wizard nav -->
+            <div class="wizard__nav">
+              <button type="button" class="btn btn--ghost" id="btnBack" data-i18n="form.back" hidden></button>
+              <button type="button" class="btn btn--primary" id="btnNext">
+                <span data-i18n="form.next"></span><span data-icon="arrow"></span>
+              </button>
+              <button type="submit" class="btn btn--primary" id="btnSubmit" hidden>
+                <span data-i18n="form.submit_offer"></span>
+              </button>
+            </div>
+          </form>
+
+          <!-- Success state / confirmation -->
+          <div class="form-success form-shell" id="offerSuccess">
+            <div class="form-success__icon"><span data-icon="checkCircle"></span></div>
+            <h3 data-i18n="offer.success_title"></h3>
+            <p data-i18n="offer.success_body"></p>
+
+            <div data-confirm-contact></div>
+
+            <a class="btn btn--ghost" href="index.html" data-i18n="offer.success_home"></a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="rb-footer"></div>
+
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/offer.js"></script>
+</body>
+</html>

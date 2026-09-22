@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Velkommen til Region Byg & Rådgivning, kvalitet, gennemsigtighed og tæt samarbejde. Byggeri og rådgivning for private og erhverv." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <title data-i18n="meta.title.about">Om os, Region Byg & Rådgivning</title>
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
+  <link rel="mask-icon" href="assets/img/favicon.svg" color="#C8996A" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Region Byg & Rådgivning" />
+  <meta property="og:title" content="Om os, Region Byg & Rådgivning" />
+  <meta property="og:description" content="Velkommen til Region Byg & Rådgivning, kvalitet, gennemsigtighed og tæt samarbejde. Byggeri og rådgivning for private og erhverv." />
+  <meta property="og:image" content="https://regionbyg.dk/assets/img/banner.jpeg" />
+  <meta property="og:url" content="https://regionbyg.dk/about.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <script>try{if(localStorage.getItem('rb-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <div id="rb-header"></div>
+
+  <main>
+    <!-- HERO, construction photo (from the flyer) as background -->
+    <section class="page-hero">
+      <div class="page-hero__bg">
+        <img src="assets/img/quality-hero.jpg" alt="Byggeplads med kran" />
+      </div>
+      <div class="container">
+        <div data-reveal>
+          <span class="eyebrow" data-i18n="about.eyebrow"></span>
+          <h1 data-i18n="quality.hero_title"></h1>
+          <p class="page-hero__sub" data-i18n="quality.hero_sub"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- WELCOME TEXT + APPROACH -->
+    <section class="section" style="padding-top:clamp(2.5rem,6vw,4rem)">
+      <div class="container">
+        <div class="split">
+          <div data-reveal>
+            <p style="color:var(--text-muted)" data-i18n="quality.intro2"></p>
+            <p style="color:var(--text-muted);margin-top:1rem" data-i18n="quality.intro3"></p>
+            <p style="color:var(--text-muted);margin-top:1rem" data-i18n="quality.intro4"></p>
+          </div>
+          <aside class="approach" data-reveal data-delay="2">
+            <h3 data-i18n="quality.approach_title"></h3>
+            <ul class="checklist">
+              <li><span data-icon="check"></span><span data-i18n="quality.approach_1"></span></li>
+              <li><span data-icon="check"></span><span data-i18n="quality.approach_2"></span></li>
+              <li><span data-icon="check"></span><span data-i18n="quality.approach_3"></span></li>
+            </ul>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATEGORIES (PRIVAT / ERHVERV / RÅDGIVNING / TRYGHED & KVALITET) -->
+    <section class="section section--tight" style="background:var(--bg-1);border-block:1px solid var(--line)">
+      <div class="container">
+        <div class="section-head section-head--center" data-reveal>
+          <h2 style="font-size:clamp(1.7rem,4vw,2.4rem)" data-i18n="quality.cats_title"></h2>
+        </div>
+        <div class="cat-grid">
+          <a class="cat-card" href="private.html" data-reveal data-delay="1">
+            <span class="cat-card__icon" data-icon="home"></span>
+            <div><h3 data-i18n="quality.cat_private_t"></h3><p data-i18n="quality.cat_private_d"></p></div>
+          </a>
+          <a class="cat-card" href="commercial.html" data-reveal data-delay="2">
+            <span class="cat-card__icon" data-icon="building"></span>
+            <div><h3 data-i18n="quality.cat_commercial_t"></h3><p data-i18n="quality.cat_commercial_d"></p></div>
+          </a>
+          <a class="cat-card" href="custom.html" data-reveal data-delay="1">
+            <span class="cat-card__icon" data-icon="advice"></span>
+            <div><h3 data-i18n="quality.cat_advisor_t"></h3><p data-i18n="quality.cat_advisor_d"></p></div>
+          </a>
+          <div class="cat-card" data-reveal data-delay="2">
+            <span class="cat-card__icon" data-icon="shield"></span>
+            <div><h3 data-i18n="quality.cat_trust_t"></h3><p data-i18n="quality.cat_trust_d"></p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOSING CTA + HASHTAGS -->
+    <section class="section">
+      <div class="container">
+        <div class="cta-band" data-reveal>
+          <h2 style="font-size:clamp(1.6rem,4vw,2.4rem)" data-i18n="quality.closing"></h2>
+          <p style="font-family:var(--font-display);color:var(--accent-light);font-weight:600" data-i18n="quality.partner"></p>
+          <div class="hero__cta">
+            <a class="btn btn--primary btn--lg" href="offer.html">
+              <span data-i18n="hero.cta_offer"></span><span data-icon="arrow"></span>
+            </a>
+            <a class="btn btn--ghost btn--lg" href="consultation.html" data-i18n="hero.cta_book"></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="rb-footer"></div>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

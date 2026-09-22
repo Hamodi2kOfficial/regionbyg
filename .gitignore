@@ -1,0 +1,12 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local Claude Code settings (per-machine, not project config)
+.claude/settings.local.json
+
+# Files accidentally saved into this project that aren't Region Byg assets
+ourcustomers/Invoice — First Payment.html
+ourcustomers/Honey Volcano — Raw Forest Honey.html
+ourcustomers/Honey Volcano — Raw Forest Honey_files/
