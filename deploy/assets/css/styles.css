@@ -3,6 +3,10 @@
    Dark, premium, brick-tan accent. Mobile-first.
    ============================================================ */
 
+/* Self-hosted fonts (latin subset covers Danish letters); no third-party requests */
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 400 600; font-display: swap; src: url("../fonts/inter-latin.woff2") format("woff2"); }
+@font-face { font-family: "Sora"; font-style: normal; font-weight: 500 800; font-display: swap; src: url("../fonts/sora-latin.woff2") format("woff2"); }
+
 /* ---------- 1. Design tokens ---------- */
 :root {
   /* Surfaces */
@@ -20,7 +24,7 @@
   /* Text */
   --text:       #F4EFE7;
   --text-muted: #9B958B;
-  --text-faint: #6E6960;
+  --text-faint: #948E84;
 
   /* Brand, brick tan / copper */
   --accent:        #C8996A;
@@ -82,7 +86,7 @@
 
   --text:       #211C17;
   --text-muted: #5E574E;
-  --text-faint: #918A7F;
+  --text-faint: #6B645A;
 
   --accent:        #BC8344;
   --accent-light:  #985A1E;   /* accent used as TEXT, deep amber, readable on light */
@@ -174,7 +178,7 @@ h1, h2, h3, h4 {
 }
 
 .section-head { max-width: 640px; margin-bottom: clamp(2.5rem, 5vw, 4rem); }
-.section-head h2 { font-size: clamp(1.9rem, 5vw, 3rem); }
+.section-head h1, .section-head h2 { font-size: clamp(1.9rem, 5vw, 3rem); }
 .section-head p { color: var(--text-muted); margin-top: 1rem; font-size: 1.05rem; }
 .section-head--center { margin-inline: auto; text-align: center; }
 .section-head--center .eyebrow::before { display: none; }
@@ -723,7 +727,7 @@ a.confirm-row:hover { background: var(--accent-soft); }
 .footer { border-top: 1px solid var(--line); background: var(--bg-1); padding-block: clamp(3rem, 6vw, 4.5rem) 2rem; }
 .footer__grid { display: grid; gap: 2.5rem; margin-bottom: 3rem; }
 .footer__brand p { color: var(--text-muted); font-size: 0.92rem; margin-top: 1.2rem; max-width: 38ch; }
-.footer__col h4 { font-size: 0.82rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 1.1rem; }
+.footer__col h4, .footer__col .footer__title { font-size: 0.82rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 1.1rem; }
 .footer__col a { display: block; color: var(--text-muted); padding: 0.35rem 0; transition: color 0.25s, padding-left 0.3s var(--ease); font-size: 0.95rem; }
 .footer__col a:hover { color: var(--accent-light); padding-left: 0.4rem; }
 .footer__bottom { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; padding-top: 2rem; border-top: 1px solid var(--line); color: var(--text-faint); font-size: 0.85rem; }
@@ -809,6 +813,7 @@ html[lang="da"] [data-lang="en"], html[lang="en"] [data-lang="da"] { display: no
 .footer__cvr { display: block; color: var(--text-faint); font-size: 0.85rem; padding-top: 0.4rem; }
 
 .legal { max-width: 760px; }
+.legal h1 { font-size: 1.5rem; }
 .legal h3 { font-size: 1.15rem; margin: 1.9rem 0 0.5rem; color: var(--text); }
 .legal p, .legal li { color: var(--text-muted); }
 .legal ul { padding-left: 1.2rem; list-style: disc; margin: 0.5rem 0; }
@@ -847,3 +852,22 @@ form.is-commercial .lbl-private { display: none; }
 form.is-commercial .lbl-company { display: inline; }
 .cvr-field { display: none; }
 form.is-commercial .cvr-field { display: block; }
+
+/* Accessibility: skip link + honeypot (hidden from users, visible to bots) */
+.skip-link { position: fixed; left: 1rem; top: -4rem; z-index: 200; background: var(--accent); color: #0A0A0A; padding: 0.7rem 1.1rem; border-radius: 8px; font-weight: 600; transition: top 0.2s var(--ease); }
+.skip-link:focus { top: 0.75rem; }
+.hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+
+/* Touch targets: at least 44px on phones and touch devices */
+@media (pointer: coarse), (max-width: 760px) {
+  .lang-toggle button { min-width: 44px; min-height: 44px; }
+  .theme-toggle { width: 44px; height: 44px; }
+  .nav__burger { min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+  .brand { min-height: 44px; align-items: center; }
+  .footer__col a { padding: 0.8rem 0; }
+}
+@media (max-width: 400px) {
+  .header__inner { gap: 0.5rem; }
+  .nav__actions { gap: 0.25rem; }
+  .lang-toggle button { min-width: 40px; padding-inline: 0.3rem; }
+}

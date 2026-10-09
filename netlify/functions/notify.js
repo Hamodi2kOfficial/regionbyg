@@ -18,31 +18,66 @@
                                     and client confirmations will work for everyone.
    ============================================================ */
 
+const MAX_BODY_CHARS = 6 * 1024 * 1024;
+const EMAIL_RE = /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/;
+const FILE_EXT_RE = /\.(jpe?g|png|webp|gif|heic|pdf|dwg|dxf|docx?|xlsx?|txt)$/i;
+const BASE64_RE = /^[A-Za-z0-9+/=]+$/;
+
+const clean = (v, max) => String(v == null ? "" : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").trim().slice(0, max);
+
+// Only our own site may call this function from a browser. Allowed: the host the
+// request itself arrived on, regionbyg.dk (+www), Netlify preview URLs, and localhost.
+function originAllowed(event) {
+  const h = event.headers || {};
+  const origin = String(h.origin || h.Origin || "").trim().toLowerCase();
+  if (!origin) return false;
+  let host;
+  try { host = new URL(origin).hostname; } catch (e) { return false; }
+  const reqHost = String(h["x-forwarded-host"] || h.host || "").split(":")[0].toLowerCase();
+  return host === "regionbyg.dk" || host === "www.regionbyg.dk"
+    || host.endsWith(".netlify.app")
+    || (!!reqHost && host === reqHost)
+    || host === "localhost";
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return json(405, { ok: false, error: "Method not allowed" });
   }
+  if (!originAllowed(event)) return json(403, { ok: false, error: "Forbidden" });
+  if ((event.body || "").length > MAX_BODY_CHARS) return json(413, { ok: false, error: "Request too large" });
 
   const KEY = process.env.RESEND_API_KEY;
-  if (!KEY) return json(500, { ok: false, error: "RESEND_API_KEY is not set in Netlify" });
+  if (!KEY) {
+    console.error("RESEND_API_KEY is not set in Netlify environment variables");
+    return json(500, { ok: false, error: "Server not configured" });
+  }
 
   let payload;
   try { payload = JSON.parse(event.body || "{}"); }
-  catch (e) { return json(400, { ok: false, error: "Invalid JSON body" }); }
+  catch (e) { return json(400, { ok: false, error: "Invalid request" }); }
+  if (!payload || typeof payload !== "object") return json(400, { ok: false, error: "Invalid request" });
 
-  const {
-    subject = "New booking",
-    clientEmail = "",
-    clientName = "",
-    fields = {},
-    attachments = [],
-    attachmentsTooLarge = []
-  } = payload;
+  const subject = clean(payload.subject || "New booking", 200).replace(/\s+/g, " ");
+  const clientEmailRaw = clean(payload.clientEmail, 254);
+  const clientEmail = EMAIL_RE.test(clientEmailRaw) ? clientEmailRaw : "";
+  const clientName = clean(payload.clientName, 120);
 
-  // Resend attachments: [{ filename, content(base64) }]
-  const safeAttachments = Array.isArray(attachments)
-    ? attachments.filter(a => a && a.filename && a.content)
-    : [];
+  const rawFields = payload.fields && typeof payload.fields === "object" && !Array.isArray(payload.fields) ? payload.fields : {};
+  const fields = {};
+  Object.entries(rawFields).slice(0, 40).forEach(([k, v]) => { fields[clean(k, 60)] = clean(v, 4000); });
+  if (!Object.keys(fields).length) return json(400, { ok: false, error: "Invalid request" });
+
+  // Resend attachments: [{ filename, content(base64) }], only safe names/types, max 10
+  const safeAttachments = (Array.isArray(payload.attachments) ? payload.attachments : [])
+    .slice(0, 10)
+    .map(a => ({
+      filename: clean(a && a.filename, 100).replace(/[^\w.\- ]/g, "_"),
+      content: a && typeof a.content === "string" ? a.content : ""
+    }))
+    .filter(a => a.filename && FILE_EXT_RE.test(a.filename) && a.content && BASE64_RE.test(a.content));
+  const attachmentsTooLarge = (Array.isArray(payload.attachmentsTooLarge) ? payload.attachmentsTooLarge : [])
+    .slice(0, 10).map(n => clean(n, 100));
 
   const from = process.env.RB_FROM || "Region Byg <onboarding@resend.dev>";
   // lowercase/trim: Resend's sandbox allow-list is case-sensitive, so "Official…"
@@ -96,8 +131,12 @@ exports.handler = async (event) => {
     client = await sendEmail(KEY, { from, to, subject: subject2, html: clientHtml });
   }
 
-  if (!business.ok) return json(502, { ok: false, error: business.error, business, client });
-  return json(200, { ok: true, business, client });
+  if (!business.ok) {
+    console.error("Business notification failed:", business.status || "", business.error);
+    return json(502, { ok: false, error: "Email service error" });
+  }
+  if (!client.ok) console.error("Client confirmation failed:", client.status || "", client.error);
+  return json(200, { ok: true });
 };
 
 async function sendEmail(key, msg) {

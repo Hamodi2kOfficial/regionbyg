@@ -47,7 +47,7 @@ const RB_API = (() => {
   function envelope(type, payload) {
     return {
       type, submittedAt: new Date().toISOString(),
-      lang: (window.RB_I18N && RB_I18N.lang && RB_I18N.lang()) || "da",
+      lang: (typeof RB_I18N !== "undefined" && RB_I18N.lang()) || "da",
       pageUrl: location.href, data: payload
     };
   }
@@ -55,8 +55,8 @@ const RB_API = (() => {
   function saveLocally(record) {
     try {
       const all = JSON.parse(localStorage.getItem("rb-submissions") || "[]");
-      all.push({ ...record, data: { ...record.data, _files: undefined } });
-      localStorage.setItem("rb-submissions", JSON.stringify(all));
+      all.push({ ...record, data: { ...record.data, _files: undefined, _hp: undefined } });
+      localStorage.setItem("rb-submissions", JSON.stringify(all.slice(-5)));
     } catch (e) { /* non-fatal */ }
   }
 
@@ -191,15 +191,30 @@ const RB_API = (() => {
      submit(type, payload) → Promise<{ ok: true }>
      ============================================================ */
   async function submit(type, payload) {
+    // Honeypot: real visitors never fill the hidden field. Pretend success, send nothing.
+    if (payload && payload._hp) { await delay(config.mockLatencyMs); return { ok: true }; }
+
     const record = envelope(type, payload);
-    saveLocally(record);
     document.dispatchEvent(new CustomEvent("rb:submission", { detail: record }));
 
-    if (config.mode === "resend")                                       return await sendViaResend(type, record);
-    if (config.mode === "form-endpoint" && endpointIsReal(config.endpoint)) return await sendViaFormEndpoint(type, record);
-    if (config.mode === "web3forms" && keyIsReal(config.web3formsKey))      return await sendViaWeb3Forms(type, record);
+    // Personal data is only kept in the browser if sending fails (so nothing is lost).
+    const send = async () => {
+      if (config.mode === "resend")                                       return await sendViaResend(type, record);
+      if (config.mode === "form-endpoint" && endpointIsReal(config.endpoint)) return await sendViaFormEndpoint(type, record);
+      if (config.mode === "web3forms" && keyIsReal(config.web3formsKey))      return await sendViaWeb3Forms(type, record);
+      return null;
+    };
+    let result;
+    try { result = await send(); }
+    catch (err) {
+      console.error("[RB_API] send failed:", err);
+      saveLocally(record);
+      throw new Error((typeof RB_I18N !== "undefined" && RB_I18N.get("form.err_send")) || "Could not send. Please try again.");
+    }
+    if (result) { if (result.mock) saveLocally(record); return result; }
 
     // MOCK fallback
+    saveLocally(record);
     if (config.mode !== "mock") {
       console.warn("[RB_API] Backend not configured, running in MOCK mode (no email sent).");
     }

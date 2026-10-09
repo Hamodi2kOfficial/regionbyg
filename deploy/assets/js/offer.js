@@ -151,26 +151,40 @@
   const fileInput = document.getElementById("fileInput");
   const fileList = document.getElementById("fileList");
 
+  const MAX_FILES = 10;
+  const MAX_BYTES = 10 * 1024 * 1024;
+  const OK_EXT = /\.(jpe?g|png|webp|gif|heic|pdf|dwg|dxf|doc|docx|xls|xlsx|txt)$/i;
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function addFiles(list) {
+    let rejected = false;
+    [...list].forEach(f => {
+      if (files.length >= MAX_FILES || f.size > MAX_BYTES || !OK_EXT.test(f.name)) { rejected = true; return; }
+      files.push(f);
+    });
+    if (rejected) window.RB_toast?.(RB_I18N.get("form.err_files"), "spark");
+    renderFiles();
+  }
   function renderFiles() {
     fileList.innerHTML = files.map((f, i) =>
-      `<li><span>${f.name} <span style="color:var(--text-faint)">(${(f.size/1024).toFixed(0)} KB)</span></span>
-       <button type="button" data-remove="${i}" aria-label="Remove">×</button></li>`).join("");
+      `<li><span>${esc(f.name)} <span style="color:var(--text-faint)">(${(f.size/1024).toFixed(0)} KB)</span></span>
+       <button type="button" data-remove="${i}" aria-label="${esc(RB_I18N.get("form.remove"))}">×</button></li>`).join("");
   }
   fileInput.addEventListener("change", () => {
-    files = files.concat([...fileInput.files]);
+    addFiles(fileInput.files);
     fileInput.value = "";
-    renderFiles();
   });
   fileList.addEventListener("click", e => {
-    const i = e.target.dataset.remove;
-    if (i !== undefined) { files.splice(+i, 1); renderFiles(); }
+    const btn = e.target.closest("[data-remove]");
+    if (btn) { files.splice(+btn.dataset.remove, 1); renderFiles(); }
   });
+  document.addEventListener("rb:langchange", renderFiles);
   ["dragover", "dragenter"].forEach(ev =>
     dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add("is-drag"); }));
   ["dragleave", "drop"].forEach(ev =>
     dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove("is-drag"); }));
   dropzone.addEventListener("drop", e => {
-    if (e.dataTransfer?.files) { files = files.concat([...e.dataTransfer.files]); renderFiles(); }
+    if (e.dataTransfer?.files) addFiles(e.dataTransfer.files);
   });
 
   /* ---------- Collect + submit ---------- */
@@ -196,12 +210,15 @@
       postal: form.postal.value.trim(),
       cvr: (form.cvr && effectiveGroup() === "commercial") ? form.cvr.value.trim() : "",
       consent: !!(form.consent && form.consent.checked),
-      _files: files
+      _files: files,
+      _hp: form.website ? form.website.value : ""
     };
   }
 
   form.addEventListener("submit", async e => {
     e.preventDefault();
+    // Enter on an earlier step must advance the wizard, never send a half-filled offer.
+    if (current < total - 1) { btnNext.click(); return; }
     if (!validateStep(steps[current])) return;
 
     const label = btnSubmit.querySelector("span") || btnSubmit;

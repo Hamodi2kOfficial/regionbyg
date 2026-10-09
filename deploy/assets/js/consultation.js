@@ -41,7 +41,8 @@
       address: form.address.value.trim(),
       datetime: form.datetime.value,
       notes: form.notes.value.trim(),
-      consent: !!(form.consent && form.consent.checked)
+      consent: !!(form.consent && form.consent.checked),
+      _hp: form.website ? form.website.value : ""
     };
 
     try {
