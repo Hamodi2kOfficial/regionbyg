@@ -6,16 +6,17 @@
      2) to the CLIENT, a friendly confirmation
 
    Set these in Netlify → Site settings → Environment variables:
-     RESEND_API_KEY   (required)  your Resend key, e.g. re_xxxxx
-     RB_NOTIFY_EMAIL  (optional)  where YOU get notified
-                                  default: Officialfarhat2k@gmail.com
-     RB_FROM          (optional)  the "from" address
-                                  default: Region Byg <onboarding@resend.dev>
-                                  ↑ Resend's sandbox sender. It can only email
-                                    YOUR OWN Resend account address until you
-                                    verify a domain. After verifying regionbyg.dk,
-                                    set this to e.g.  Region Byg <booking@regionbyg.dk>
-                                    and client confirmations will work for everyone.
+     RESEND_API_KEY     (required)  the Resend key, e.g. re_xxxxx
+     RB_NOTIFY_EMAIL    (optional)  where the company gets bookings
+                                    default: kontakt@regionbyg.dk
+     RB_FROM            (optional)  the "from" address
+                                    default: Region Byg <booking@regionbyg.dk>
+     RB_FALLBACK_EMAIL  (optional)  Resend account owner's inbox, used ONLY while
+                                    regionbyg.dk is not verified in Resend yet
+                                    default: the developer's address
+
+   Live mode is automatic: as soon as regionbyg.dk is verified in Resend,
+   bookings go to RB_NOTIFY_EMAIL and customers get their confirmation.
    ============================================================ */
 
 const MAX_BODY_CHARS = 6 * 1024 * 1024;
@@ -79,15 +80,18 @@ exports.handler = async (event) => {
   const attachmentsTooLarge = (Array.isArray(payload.attachmentsTooLarge) ? payload.attachmentsTooLarge : [])
     .slice(0, 10).map(n => clean(n, 100));
 
-  const from = process.env.RB_FROM || "Region Byg <onboarding@resend.dev>";
-  // lowercase/trim: Resend's sandbox allow-list is case-sensitive, so "Official…"
-  // must be sent as "official…" to match the account address exactly.
-  const notifyTo = (process.env.RB_NOTIFY_EMAIL || "officialfarhat2k@gmail.com").trim().toLowerCase();
-  // Resend "sandbox": until a domain is verified, mail can ONLY reach your own
-  // account address. While the from-address is the sandbox one, route everything
-  // to notifyTo so testing always succeeds (no "can only send to your own email"
-  // error). After you verify regionbyg.dk and set RB_FROM, real client emails flow.
-  const sandbox = /@resend\.dev/i.test(from);
+  // LIVE mode: send from the company domain to the company inbox.
+  // Until regionbyg.dk is verified in Resend, Resend refuses everything except mail to
+  // the Resend account owner; in that case we automatically fall back to the sandbox
+  // sender and the owner's inbox so no booking is ever lost. Once the DNS records are
+  // added and verified, live mode simply starts working, no change needed here.
+  const LIVE_FROM = process.env.RB_FROM || "Region Byg <booking@regionbyg.dk>";
+  const SANDBOX_FROM = "Region Byg <onboarding@resend.dev>";
+  const notifyTo = (process.env.RB_NOTIFY_EMAIL || "kontakt@regionbyg.dk").trim().toLowerCase();
+  // Lowercase/trim: Resend's sandbox allow-list is case-sensitive.
+  const fallbackTo = (process.env.RB_FALLBACK_EMAIL || "officialfarhat2k@gmail.com").trim().toLowerCase();
+  let from = LIVE_FROM;
+  let sandbox = /@resend\.dev/i.test(from);
 
   const rows = Object.entries(fields).map(([k, v]) =>
     `<tr>
@@ -112,29 +116,37 @@ exports.handler = async (event) => {
      <p style="margin:18px 0 0;color:#6b675f;font:400 13px Arial,sans-serif">Region Byg &amp; Rådgivning · Kontakt@regionbyg.dk · +45 30 60 26 60</p>`
   );
 
-  // 1) Business notification (works immediately in the Resend sandbox,
-  //    because notifyTo is your own Resend account email).
-  const business = await sendEmail(KEY, {
-    from, to: notifyTo, reply_to: clientEmail || undefined, subject, html: businessHtml,
+  // 1) Business notification to the company inbox (kontakt@regionbyg.dk).
+  const sendBusiness = (html) => sendEmail(KEY, {
+    from, to: sandbox ? fallbackTo : notifyTo, reply_to: clientEmail || undefined, subject, html,
     ...(safeAttachments.length ? { attachments: safeAttachments } : {})
   });
-
-  // 2) Client confirmation. In sandbox it's routed to YOUR inbox (a preview) so
-  //    nothing violates Resend's test rule; after domain verification it goes to
-  //    the real client. A failure here never breaks the booking.
-  let client = { ok: true, skipped: true };
-  if (clientEmail) {
-    const to = (sandbox ? notifyTo : clientEmail).trim().toLowerCase();
-    const subject2 = sandbox
-      ? "[TEST, would send to " + clientEmail + "] Region Byg, booking received"
-      : "Region Byg, booking modtaget / received";
-    client = await sendEmail(KEY, { from, to, subject: subject2, html: clientHtml });
+  let business = await sendBusiness(businessHtml);
+  if (!business.ok && !sandbox && domainNotVerified(business)) {
+    console.error("regionbyg.dk is not verified in Resend yet, using the test inbox:", business.error);
+    sandbox = true;
+    from = SANDBOX_FROM;
+    const banner = `<p style="margin:0 0 14px;padding:10px 12px;background:#fff6df;border:1px solid #f0dca0;border-radius:8px;color:#7a5900;font:600 13px Arial,sans-serif">Test delivery: regionbyg.dk is not verified in Resend yet, so this booking was sent to the test inbox instead of ${esc(notifyTo)}. Please forward it.</p>`;
+    business = await sendBusiness(banner + businessHtml);
   }
 
   if (!business.ok) {
     console.error("Business notification failed:", business.status || "", business.error);
     return json(502, { ok: false, error: "Email service error" });
   }
+
+  // 2) Client confirmation. In sandbox it's routed to the test inbox (a preview) so
+  //    nothing violates Resend's test rule; once live it goes to the real client.
+  //    A failure here never breaks the booking.
+  let client = { ok: true, skipped: true };
+  if (clientEmail) {
+    const to = (sandbox ? fallbackTo : clientEmail).trim().toLowerCase();
+    const subject2 = sandbox
+      ? "[TEST, would send to " + clientEmail + "] Region Byg, booking received"
+      : "Region Byg, booking modtaget / received";
+    client = await sendEmail(KEY, { from, to, subject: subject2, html: clientHtml });
+  }
+
   if (!client.ok) console.error("Client confirmation failed:", client.status || "", client.error);
   return json(200, { ok: true });
 };
@@ -154,6 +166,9 @@ async function sendEmail(key, msg) {
   }
 }
 
+function domainNotVerified(r) {
+  return (r.status === 403 || r.status === 422) && /verif|domain|testing emails|own email/i.test(String(r.error || ""));
+}
 function json(statusCode, obj) {
   return { statusCode, headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) };
 }

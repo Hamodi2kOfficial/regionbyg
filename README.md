@@ -60,8 +60,11 @@ Set these in Netlify, Site settings, Environment variables:
 | Variable | Required | Meaning |
 |---|---|---|
 | `RESEND_API_KEY` | yes | Resend API key (`re_...`) |
-| `RB_NOTIFY_EMAIL` | no | Inbox that receives bookings (default: the owner's address) |
-| `RB_FROM` | no | Sender, e.g. `Region Byg <booking@regionbyg.dk>`. Needs the domain verified in Resend. Until set, Resend's sandbox sender is used: bookings reach the business inbox, but customers get no confirmation and the subject shows `[TEST ...]` |
+| `RB_NOTIFY_EMAIL` | no | Inbox that receives bookings (default: `kontakt@regionbyg.dk`) |
+| `RB_FROM` | no | Sender (default: `Region Byg <booking@regionbyg.dk>`) |
+| `RB_FALLBACK_EMAIL` | no | Resend account owner's inbox, used only while regionbyg.dk is not yet verified in Resend |
+
+**Going live is automatic.** The function always tries `booking@regionbyg.dk` to `kontakt@regionbyg.dk` first. Until regionbyg.dk is verified in Resend (DNS records added), Resend refuses that, so the function falls back to the test inbox with a clear banner and no booking is lost. The moment the domain is verified, bookings go to `kontakt@regionbyg.dk` and customers get their confirmation, with no code or settings change.
 
 The function only accepts requests from regionbyg.dk, www.regionbyg.dk, its own host and
 *.netlify.app addresses, validates and size-limits all input, and only forwards safe

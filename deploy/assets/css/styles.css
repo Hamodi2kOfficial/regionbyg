@@ -871,3 +871,9 @@ form.is-commercial .cvr-field { display: block; }
   .nav__actions { gap: 0.25rem; }
   .lang-toggle button { min-width: 40px; padding-inline: 0.3rem; }
 }
+
+/* Customer logo that ships as a solid-colour tile (not a transparent PNG):
+   keep its own colours in both themes, rounded to sit with the other logos */
+.marquee__logo--tile { height: clamp(46px, 8.5vw, 68px); border-radius: 14px; opacity: 0.92; box-shadow: 0 6px 22px -10px rgba(0, 0, 0, 0.55); }
+[data-theme="light"] .marquee__logo--tile { filter: none; opacity: 0.95; box-shadow: 0 6px 22px -10px rgba(60, 45, 20, 0.35); }
+.marquee__logo--tile:hover { opacity: 1; }
