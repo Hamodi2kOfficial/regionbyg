@@ -44,6 +44,10 @@ const RB_API = (() => {
   const endpointIsReal = (u) => typeof u === "string" && /^https?:\/\//i.test(u) && !/PASTE|YOUR|HERE/i.test(u);
   const keyIsReal = (k) => typeof k === "string" && k.length >= 20 && !/PASTE|YOUR|HERE/i.test(k);
   const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  // Local dev (no Netlify functions) vs. the real site, which must never
+  // silently swallow a booking.
+  const isLocal = () => location.protocol === "file:" ||
+    /^(localhost|127\.0\.0\.1|\[::1\]|.*\.local)$/i.test(location.hostname);
 
   function envelope(type, payload) {
     return {
@@ -141,10 +145,16 @@ const RB_API = (() => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
     });
-    // Function not available here (plain static host returns 404/405) → safe mock fallback
+    // Function not available (a plain static host returns 404/405). On localhost
+    // that is expected, so fall back to mock mode. On the LIVE site it means no
+    // booking email was sent, so fail loudly instead of telling the customer
+    // everything went through.
     if (res.status === 404 || res.status === 405) {
-      console.warn("[RB_API] Notify function not found (deploy to Netlify to enable emails), MOCK mode.");
-      return { ok: true, mock: true };
+      if (isLocal()) {
+        console.warn("[RB_API] Notify function not found (local dev), MOCK mode.");
+        return { ok: true, mock: true };
+      }
+      throw new Error("Notification service unavailable (" + res.status + ")");
     }
     let json = {};
     try { json = await res.json(); } catch (e) {}
