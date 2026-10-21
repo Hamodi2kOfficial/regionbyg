@@ -94,8 +94,8 @@ const RB_API = (() => {
   };
   const TIMELINE_KEY = { urgent: "tl_urgent", "2-4m": "tl_24", "4m+": "tl_4plus", unsure: "tl_unsure" };
 
-  function subjectFor(type, d) {
-    const L = LABELS.da;
+  function subjectFor(type, d, lang) {
+    const L = LABELS[lang === "en" ? "en" : "da"];
     return "Region Byg, " + (type === "offer" ? L.offerSubject : L.consSubject) + (d.name ? ", " + d.name : "");
   }
 
@@ -176,11 +176,11 @@ const RB_API = (() => {
 
     const body = {
       type,
-      subject: subjectFor(type, d),
+      subject: subjectFor(type, d, record.lang),
       clientEmail: d.email || "",
       clientName: d.name || "",
       lang: record.lang === "en" ? "en" : "da",
-      fields: emailFields(type, d, record, "da"),
+      fields: emailFields(type, d, record, record.lang),
       clientFields: emailFields(type, d, record, record.lang),
       attachments,
       attachmentsTooLarge: (files.length && totalBytes > MAX_ATTACH)

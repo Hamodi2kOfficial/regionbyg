@@ -63,8 +63,9 @@ Set these in Netlify, Site settings, Environment variables:
 | (not used) | no | The company inbox is fixed to `kontakt@regionbyg.dk` in code. An old `RB_NOTIFY_EMAIL` setting in Netlify is ignored and can be deleted |
 | `RB_FROM` | no | Sender (default: `Region Byg <booking@regionbyg.dk>`) |
 | `RB_NOTIFY_ALSO` | no | Extra inboxes that ALSO get every booking, as separate emails (comma separated). Off by default: bookings go only to `kontakt@regionbyg.dk`. It can only add recipients, never replace the company inbox |
+| `RB_FALLBACK_EMAIL` | no | Inbox that receives bookings ONLY while regionbyg.dk is not verified in Resend. Off by default |
 
-**Every booking goes to `kontakt@regionbyg.dk`.** If regionbyg.dk is not verified in Resend, the function falls back to the sandbox sender and the account owner inbox with a clear banner, so no booking is lost. The response of `/api/notify` lists `sentTo` and `failedTo`, so a test booking shows where every copy went. To add a safety-net inbox, set `RB_NOTIFY_ALSO` in Netlify.
+**Every booking goes to `kontakt@regionbyg.dk`, and the person who submitted gets a confirmation. Nobody else.** Both emails (subject, labels, values and text) are in the language the request was submitted in: Danish by default, English if the visitor used the English site. If regionbyg.dk is not verified in Resend, the form shows an error instead of silently redirecting the booking. The response of `/api/notify` lists `sentTo` and `failedTo`, so a test booking shows where every copy went. Optional settings (all off by default): `RB_NOTIFY_ALSO` adds extra inboxes, `RB_FALLBACK_EMAIL` receives bookings while the domain is unverified.
 
 The function only accepts requests from regionbyg.dk, www.regionbyg.dk, its own host and
 *.netlify.app addresses, validates and size-limits all input, and only forwards safe
