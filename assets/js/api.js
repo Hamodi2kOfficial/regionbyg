@@ -39,6 +39,8 @@ const RB_API = (() => {
   };
 
   /* ---- helpers ---- */
+  const isLocal = () => location.protocol === "file:" ||
+    /^(localhost|127\.0\.0\.1|\[::1\]|.*\.local)$/i.test(location.hostname);
   const endpointIsReal = (u) => typeof u === "string" && /^https?:\/\//i.test(u) && !/PASTE|YOUR|HERE/i.test(u);
   const keyIsReal = (k) => typeof k === "string" && k.length >= 20 && !/PASTE|YOUR|HERE/i.test(k);
   const delay = (ms) => new Promise(r => setTimeout(r, ms));
@@ -59,42 +61,90 @@ const RB_API = (() => {
     } catch (e) { /* non-fatal */ }
   }
 
+  /* The company works in Danish: emails to the company are always Danish.
+     The customer's confirmation uses the language they used on the site. */
+  const tr = (key, lang, fallback) =>
+    (typeof RB_I18N !== "undefined" && RB_I18N.get(key, lang)) || fallback || key;
+
+  const LABELS = {
+    da: {
+      offerSubject: "Ny tilbudsforespørgsel", consSubject: "Ny konsultationsbooking",
+      type: "Henvendelsestype", typeOffer: "Tilbudsforespørgsel", typeCons: "Konsultationsbooking",
+      clientType: "Kundetype", service: "Ydelse", help: "Har brug for hjælp til",
+      description: "Projektbeskrivelse", budget: "Estimeret budget (DKK)", timeline: "Tidsramme",
+      drawings: "Tegninger", files: "Uploadede filer", extra: "Yderligere oplysninger",
+      nameCompany: "Navn / virksomhed", name: "Navn", cvr: "CVR", email: "E-mail", phone: "Telefon",
+      address: "Adresse", projectAddress: "Projektadresse", city: "By", postal: "Postnummer",
+      when: "Ønsket dato og tidspunkt", notes: "Bemærkninger",
+      consent: "Samtykke", yes: "Ja (vilkår og privatlivspolitik accepteret)", no: "Nej",
+      received: "Modtaget", language: "Kundens sprog", langName: { da: "Dansk", en: "Engelsk" }, locale: "da-DK"
+    },
+    en: {
+      offerSubject: "New offer request", consSubject: "New consultation booking",
+      type: "Request type", typeOffer: "Offer request", typeCons: "Consultation booking",
+      clientType: "Client type", service: "Service", help: "Needs help with",
+      description: "Project description", budget: "Estimated budget (DKK)", timeline: "Timeline",
+      drawings: "Drawings", files: "Uploaded files", extra: "Additional information",
+      nameCompany: "Name / company", name: "Name", cvr: "CVR", email: "Email", phone: "Phone",
+      address: "Address", projectAddress: "Project address", city: "City", postal: "Postal code",
+      when: "Preferred date and time", notes: "Notes",
+      consent: "Consent", yes: "Yes (terms and privacy policy accepted)", no: "No",
+      received: "Received", language: "Customer language", langName: { da: "Danish", en: "English" }, locale: "en-GB"
+    }
+  };
+  const TIMELINE_KEY = { urgent: "tl_urgent", "2-4m": "tl_24", "4m+": "tl_4plus", unsure: "tl_unsure" };
+
   function subjectFor(type, d) {
-    const label = type === "offer" ? "New offer request" : "New consultation booking";
-    return "Region Byg, " + label + (d.name ? ", " + d.name : "");
+    const L = LABELS.da;
+    return "Region Byg, " + (type === "offer" ? L.offerSubject : L.consSubject) + (d.name ? ", " + d.name : "");
   }
 
-  /* ---- readable, labeled fields for the emails ---- */
-  function emailFields(type, d, record) {
+  function fmtDate(value, lang, withZone) {
+    try {
+      const opts = { dateStyle: "long", timeStyle: "short" };
+      if (withZone) opts.timeZone = "Europe/Copenhagen";
+      return new Date(value).toLocaleString(LABELS[lang].locale, opts);
+    } catch (e) { return value || "-"; }
+  }
+
+  /* ---- readable, labeled fields for the emails (lang = "da" | "en") ---- */
+  function emailFields(type, d, record, lang) {
+    lang = lang === "en" ? "en" : "da";
+    const L = LABELS[lang];
     const fileNames = (d._files || []).map(f => f.name).join(", ") || "-";
+    const common = {
+      [L.consent]: d.consent ? L.yes : L.no,
+      [L.received]: fmtDate(record.submittedAt, lang, true),
+      [L.language]: L.langName[record.lang === "en" ? "en" : "da"]
+    };
     if (type === "offer") {
       const svc = d.service || {};
+      const group = svc.group === "commercial" ? tr("choose.commercial_title", lang) : svc.group === "private" ? tr("choose.private_title", lang) : "-";
       return {
-        "Booking type": "Offer request",
-        "Service": (svc.name_en || "-") + (svc.group ? " (" + svc.group + ")" : ""),
-        "Needs help with": d.help || "-",
-        "Project description": d.description || "-",
-        "Estimated budget (DKK)": d.budget || "-",
-        "Timeline": d.timeline || "-",
-        "Drawings": (d.drawings || []).join(", ") || "-",
-        "Uploaded files": fileNames,
-        "Additional info": d.extra || "-",
-        "Name / Company": d.name,
-        ...(d.cvr ? { "CVR": d.cvr } : {}),
-        "Email": d.email, "Phone": d.phone,
-        "Address": d.address, "City": d.city, "Postal code": d.postal,
-        "Consent": d.consent ? "Yes (privacy policy accepted)" : "No",
-        "Submitted": record.submittedAt, "Language": record.lang
+        [L.type]: L.typeOffer,
+        [L.clientType]: group,
+        [L.service]: (lang === "en" ? svc.name_en : svc.name_da) || "-",
+        [L.help]: d.help ? tr("offer.help_" + d.help, lang, d.help) : "-",
+        [L.description]: d.description || "-",
+        [L.budget]: d.budget || "-",
+        [L.timeline]: d.timeline ? tr("offer." + (TIMELINE_KEY[d.timeline] || d.timeline), lang, d.timeline) : "-",
+        [L.drawings]: (d.drawings || []).map(v => tr("offer.draw_" + v, lang, v)).join(", ") || "-",
+        [L.files]: fileNames,
+        [L.extra]: d.extra || "-",
+        [L.nameCompany]: d.name,
+        ...(d.cvr ? { [L.cvr]: d.cvr } : {}),
+        [L.email]: d.email, [L.phone]: d.phone,
+        [L.address]: d.address, [L.city]: d.city, [L.postal]: d.postal,
+        ...common
       };
     }
     return {
-      "Booking type": "Consultation booking",
-      "Name": d.name, "Email": d.email, "Phone": d.phone,
-      "Project address": d.address,
-      "Preferred date & time": d.datetime || "-",
-      "Notes": d.notes || "-",
-      "Consent": d.consent ? "Yes (privacy policy accepted)" : "No",
-      "Submitted": record.submittedAt, "Language": record.lang
+      [L.type]: L.typeCons,
+      [L.name]: d.name, [L.email]: d.email, [L.phone]: d.phone,
+      [L.projectAddress]: d.address,
+      [L.when]: d.datetime ? fmtDate(d.datetime, lang, false) : "-",
+      [L.notes]: d.notes || "-",
+      ...common
     };
   }
 
@@ -129,7 +179,9 @@ const RB_API = (() => {
       subject: subjectFor(type, d),
       clientEmail: d.email || "",
       clientName: d.name || "",
-      fields: emailFields(type, d, record),
+      lang: record.lang === "en" ? "en" : "da",
+      fields: emailFields(type, d, record, "da"),
+      clientFields: emailFields(type, d, record, record.lang),
       attachments,
       attachmentsTooLarge: (files.length && totalBytes > MAX_ATTACH)
         ? files.map(f => f.name) : []
@@ -139,10 +191,15 @@ const RB_API = (() => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
     });
-    // Function not available here (plain static host returns 404/405) → safe mock fallback
+    // Function not available (a plain static host returns 404/405). On localhost that is
+    // expected, so fall back to mock mode. On the LIVE site it means no email was sent, so
+    // fail loudly instead of telling the customer everything went through.
     if (res.status === 404 || res.status === 405) {
-      console.warn("[RB_API] Notify function not found (deploy to Netlify to enable emails), MOCK mode.");
-      return { ok: true, mock: true };
+      if (isLocal()) {
+        console.warn("[RB_API] Notify function not found (local dev), MOCK mode.");
+        return { ok: true, mock: true };
+      }
+      throw new Error("Notification service unavailable (" + res.status + ")");
     }
     let json = {};
     try { json = await res.json(); } catch (e) {}

@@ -7,16 +7,19 @@
 
    Set these in Netlify → Site settings → Environment variables:
      RESEND_API_KEY     (required)  the Resend key, e.g. re_xxxxx
-     RB_NOTIFY_EMAIL    (optional)  where the company gets bookings
-                                    default: kontakt@regionbyg.dk
+     (Company inbox is fixed in code: kontakt@regionbyg.dk. Any old RB_NOTIFY_EMAIL
+      setting in Netlify is ignored and can be deleted.)
      RB_FROM            (optional)  the "from" address
                                     default: Region Byg <booking@regionbyg.dk>
-     RB_FALLBACK_EMAIL  (optional)  Resend account owner's inbox, used ONLY while
-                                    regionbyg.dk is not verified in Resend yet
-                                    default: the developer's address
+                                    (must be on a domain verified in Resend)
+     RB_NOTIFY_ALSO     (optional)  extra backup inboxes, comma separated
+                                    default: officialfarhat2k@gmail.com
+                                    "none" switches the backup off
 
-   Live mode is automatic: as soon as regionbyg.dk is verified in Resend,
-   bookings go to RB_NOTIFY_EMAIL and customers get their confirmation.
+   Every booking goes to kontakt@regionbyg.dk AND, as a separate independent email,
+   to the backup inbox(es) in RB_NOTIFY_ALSO (default: the Resend account owner;
+   "none" switches the backup off). Live mode is automatic: as soon as regionbyg.dk
+   is verified in Resend, customers get their confirmation.
    ============================================================ */
 
 const MAX_BODY_CHARS = 6 * 1024 * 1024;
@@ -59,15 +62,24 @@ exports.handler = async (event) => {
   catch (e) { return json(400, { ok: false, error: "Invalid request" }); }
   if (!payload || typeof payload !== "object") return json(400, { ok: false, error: "Invalid request" });
 
-  const subject = clean(payload.subject || "New booking", 200).replace(/\s+/g, " ");
+  const subject = clean(payload.subject || "Ny henvendelse", 200).replace(/\s+/g, " ");
+  // Danish by default. English only when the customer used the English version of the site.
+  const lang = payload.lang === "en" ? "en" : "da";
   const clientEmailRaw = clean(payload.clientEmail, 254);
   const clientEmail = EMAIL_RE.test(clientEmailRaw) ? clientEmailRaw : "";
   const clientName = clean(payload.clientName, 120);
 
-  const rawFields = payload.fields && typeof payload.fields === "object" && !Array.isArray(payload.fields) ? payload.fields : {};
-  const fields = {};
-  Object.entries(rawFields).slice(0, 40).forEach(([k, v]) => { fields[clean(k, 60)] = clean(v, 4000); });
+  const cleanFields = (raw) => {
+    const out = {};
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      Object.entries(raw).slice(0, 40).forEach(([k, v]) => { out[clean(k, 60)] = clean(v, 4000); });
+    }
+    return out;
+  };
+  const fields = cleanFields(payload.fields);                 // company copy, always Danish
   if (!Object.keys(fields).length) return json(400, { ok: false, error: "Invalid request" });
+  const clientFields = Object.keys(cleanFields(payload.clientFields)).length
+    ? cleanFields(payload.clientFields) : fields;             // customer copy, in their language
 
   // Resend attachments: [{ filename, content(base64) }], only safe names/types, max 10
   const safeAttachments = (Array.isArray(payload.attachments) ? payload.attachments : [])
@@ -87,68 +99,135 @@ exports.handler = async (event) => {
   // added and verified, live mode simply starts working, no change needed here.
   const LIVE_FROM = process.env.RB_FROM || "Region Byg <booking@regionbyg.dk>";
   const SANDBOX_FROM = "Region Byg <onboarding@resend.dev>";
-  const notifyTo = (process.env.RB_NOTIFY_EMAIL || "kontakt@regionbyg.dk").trim().toLowerCase();
-  // Lowercase/trim: Resend's sandbox allow-list is case-sensitive.
-  const fallbackTo = (process.env.RB_FALLBACK_EMAIL || "officialfarhat2k@gmail.com").trim().toLowerCase();
+  // The company inbox is fixed in code on purpose: an old RB_NOTIFY_EMAIL setting in
+  // Netlify (it used to point at the developer's Gmail) must not be able to redirect bookings.
+  const COMPANY_EMAIL = "kontakt@regionbyg.dk";
+  // Resend account owner: the only inbox Resend's sandbox will deliver to, and a backup
+  // inbox on a different provider (mail from regionbyg.dk to regionbyg.dk can be quietly
+  // filtered by the domain's own mail host; Gmail is immune to that).
+  const OWNER_EMAIL = "officialfarhat2k@gmail.com";
+  const norm = (s) => String(s).trim().toLowerCase();
+  // RB_NOTIFY_ALSO adds extra backup inboxes (comma separated) or switches them off with "none".
+  // It can only ADD recipients; it can never replace or remove the company inbox.
+  const alsoRaw = process.env.RB_NOTIFY_ALSO === undefined ? OWNER_EMAIL : process.env.RB_NOTIFY_ALSO;
+  const extras = alsoRaw.split(",").map(norm).filter(x => x && x !== "none" && EMAIL_RE.test(x));
   let from = LIVE_FROM;
   let sandbox = /@resend\.dev/i.test(from);
+  // The company copy is sent FROM a different address than the one receiving it. If the
+  // sender and the recipient are the same address (e.g. RB_FROM = kontakt@regionbyg.dk), a
+  // mail host sees its own address arriving from outside and treats it as spoofing.
+  const fromAddr = (LIVE_FROM.match(/<([^>]+)>/) || LIVE_FROM.match(/^\s*([^\s<>]+@[^\s<>]+)\s*$/) || [])[1];
+  const siteSender = fromAddr && !sandbox ? "Region Byg hjemmeside <hjemmeside@" + fromAddr.split("@")[1] + ">" : from;
+  let businessFrom = siteSender;
+  // In Resend's sandbox only the account owner can receive mail.
+  const recipients = (sandbox ? [norm(OWNER_EMAIL)] : [COMPANY_EMAIL, ...extras])
+    .filter((x, i, all) => all.indexOf(x) === i);
 
-  const rows = Object.entries(fields).map(([k, v]) =>
+  const toRows = (obj) => Object.entries(obj).map(([k, v]) =>
     `<tr>
        <td style="padding:6px 12px;color:#6b675f;font:600 13px Arial,sans-serif;white-space:nowrap;vertical-align:top">${esc(k)}</td>
        <td style="padding:6px 12px;color:#1a1714;font:400 14px Arial,sans-serif">${esc(String(v)).replace(/\n/g, "<br>")}</td>
      </tr>`).join("");
 
+  // Email to the company: always Danish.
   const businessHtml = wrap(
     `<h2 style="margin:0 0 4px;font:700 18px Arial,sans-serif;color:#1a1714">${esc(subject)}</h2>
-     <p style="margin:0 0 16px;color:#6b675f;font:400 13px Arial,sans-serif">Region Byg &amp; Rådgivning, new website booking</p>
-     <table style="border-collapse:collapse;width:100%;border:1px solid #eee;border-radius:8px">${rows}</table>
-     ${safeAttachments.length ? `<p style="margin:14px 0 0;font:600 13px Arial,sans-serif;color:#1a1714">${safeAttachments.length} file(s) attached to this email.</p>` : ""}
-     ${(attachmentsTooLarge && attachmentsTooLarge.length) ? `<p style="margin:8px 0 0;font:400 13px Arial,sans-serif;color:#b45309">The customer uploaded files that were too large to attach: ${esc(attachmentsTooLarge.join(", "))}. Ask them to email these directly.</p>` : ""}
-     ${clientEmail ? `<p style="margin:16px 0 0;font:400 13px Arial,sans-serif;color:#6b675f">Reply directly to <a href="mailto:${esc(clientEmail)}">${esc(clientEmail)}</a></p>` : ""}`
+     <p style="margin:0 0 16px;color:#6b675f;font:400 13px Arial,sans-serif">Region Byg &amp; Rådgivning, ny henvendelse fra hjemmesiden</p>
+     <table style="border-collapse:collapse;width:100%;border:1px solid #eee;border-radius:8px">${toRows(fields)}</table>
+     ${safeAttachments.length ? `<p style="margin:14px 0 0;font:600 13px Arial,sans-serif;color:#1a1714">${safeAttachments.length} fil(er) er vedhæftet denne e-mail.</p>` : ""}
+     ${(attachmentsTooLarge && attachmentsTooLarge.length) ? `<p style="margin:8px 0 0;font:400 13px Arial,sans-serif;color:#b45309">Kunden har uploadet filer, der var for store til at vedhæfte: ${esc(attachmentsTooLarge.join(", "))}. Bed kunden sende dem direkte.</p>` : ""}
+     ${clientEmail ? `<p style="margin:16px 0 0;font:400 13px Arial,sans-serif;color:#6b675f">Svar direkte til <a href="mailto:${esc(clientEmail)}">${esc(clientEmail)}</a></p>` : ""}`
   );
 
+  // Confirmation to the customer: Danish by default, English if they used the English site.
+  const T = lang === "en" ? {
+    hello: "Thank you", body: "We have received your request at <b>Region Byg &amp; Rådgivning</b> and will get back to you as soon as possible, typically within 1-2 business days.",
+    subject: "Region Byg, we have received your request"
+  } : {
+    hello: "Tak", body: "Vi har modtaget din henvendelse hos <b>Region Byg &amp; Rådgivning</b> og kontakter dig hurtigst muligt, typisk inden for 1-2 hverdage.",
+    subject: "Region Byg, vi har modtaget din henvendelse"
+  };
   const clientHtml = wrap(
-    `<h2 style="margin:0 0 8px;font:700 18px Arial,sans-serif;color:#1a1714">Tak${clientName ? ", " + esc(clientName) : ""}!</h2>
-     <p style="margin:0 0 12px;color:#3a3630;font:400 14px Arial,sans-serif">Vi har modtaget din henvendelse hos <b>Region Byg &amp; Rådgivning</b> og kontakter dig hurtigst muligt, typisk inden for 1-2 hverdage.</p>
-     <p style="margin:0 0 16px;color:#3a3630;font:400 14px Arial,sans-serif">We've received your request and will get in touch as soon as possible, typically within 1-2 business days.</p>
-     <table style="border-collapse:collapse;width:100%;border:1px solid #eee;border-radius:8px">${rows}</table>
-     <p style="margin:18px 0 0;color:#6b675f;font:400 13px Arial,sans-serif">Region Byg &amp; Rådgivning · Kontakt@regionbyg.dk · +45 30 60 26 60</p>`
+    `<h2 style="margin:0 0 8px;font:700 18px Arial,sans-serif;color:#1a1714">${T.hello}${clientName ? ", " + esc(clientName) : ""}!</h2>
+     <p style="margin:0 0 16px;color:#3a3630;font:400 14px Arial,sans-serif">${T.body}</p>
+     <table style="border-collapse:collapse;width:100%;border:1px solid #eee;border-radius:8px">${toRows(clientFields)}</table>
+     <p style="margin:18px 0 0;color:#6b675f;font:400 13px Arial,sans-serif">Region Byg &amp; Rådgivning ApS · Kontakt@regionbyg.dk · +45 30 60 26 60</p>`
   );
 
-  // 1) Business notification to the company inbox (kontakt@regionbyg.dk).
-  const sendBusiness = (html) => sendEmail(KEY, {
-    from, to: sandbox ? fallbackTo : notifyTo, reply_to: clientEmail || undefined, subject, html,
-    ...(safeAttachments.length ? { attachments: safeAttachments } : {})
-  });
-  let business = await sendBusiness(businessHtml);
-  if (!business.ok && !sandbox && domainNotVerified(business)) {
-    console.error("regionbyg.dk is not verified in Resend yet, using the test inbox:", business.error);
+  // 1) Business notification. One independent email per recipient, so a failure
+  //    for one address never costs the others their copy.
+  const note = (text) => `<p style="margin:0 0 14px;padding:10px 12px;background:#fff6df;border:1px solid #f0dca0;border-radius:8px;color:#7a5900;font:600 13px Arial,sans-serif">${text}</p>`;
+  async function sendBusinessTo(to, html) {
+    const base = { from: businessFrom, to, reply_to: clientEmail || undefined, subject };
+    let r = await sendEmail(KEY, { ...base, html, ...(safeAttachments.length ? { attachments: safeAttachments } : {}) });
+    // A rejected attachment must not cost us the whole booking: resend without the
+    // files and list them by name instead.
+    if (!r.ok && safeAttachments.length && !domainNotVerified(r)) {
+      const names = safeAttachments.map(x => x.filename).join(", ");
+      const retry = await sendEmail(KEY, { ...base, html: html + note("Kundens filer kunne ikke vedhæftes (" + esc(names) + "). Bed kunden sende dem direkte.") });
+      if (retry.ok) r = retry;
+    }
+    return { to, ...r };
+  }
+
+  let deliveries = await Promise.all(recipients.map(to => sendBusinessTo(to, businessHtml)));
+
+  // regionbyg.dk not verified in Resend yet: every live send is refused. Fall back to the
+  // sandbox sender and the account owner's inbox so no booking is ever lost. Once the DNS
+  // records are verified this branch is simply never used.
+  if (!sandbox && deliveries.every(d => !d.ok && domainNotVerified(d))) {
+    console.error("regionbyg.dk is not verified in Resend yet, using the test inbox:", deliveries[0].error);
     sandbox = true;
     from = SANDBOX_FROM;
-    const banner = `<p style="margin:0 0 14px;padding:10px 12px;background:#fff6df;border:1px solid #f0dca0;border-radius:8px;color:#7a5900;font:600 13px Arial,sans-serif">Test delivery: regionbyg.dk is not verified in Resend yet, so this booking was sent to the test inbox instead of ${esc(notifyTo)}. Please forward it.</p>`;
-    business = await sendBusiness(banner + businessHtml);
+    businessFrom = SANDBOX_FROM;
+    const banner = note("Testlevering: regionbyg.dk er endnu ikke verificeret i Resend, så denne henvendelse er sendt til test-indbakken i stedet for " + esc(COMPANY_EMAIL) + ". Videresend den venligst.");
+    deliveries = [await sendBusinessTo(norm(OWNER_EMAIL), banner + businessHtml)];
   }
 
-  if (!business.ok) {
-    console.error("Business notification failed:", business.status || "", business.error);
-    return json(502, { ok: false, error: "Email service error" });
-  }
+  deliveries.filter(d => !d.ok).forEach(d => console.error("Business notification to " + d.to + " failed:", d.status || "", d.error));
+  const delivered = deliveries.filter(d => d.ok).map(d => d.to);
+  const failed = deliveries.filter(d => !d.ok).map(d => ({ to: d.to, status: d.status || null }));
 
-  // 2) Client confirmation. In sandbox it's routed to the test inbox (a preview) so
-  //    nothing violates Resend's test rule; once live it goes to the real client.
-  //    A failure here never breaks the booking.
+  // Only a booking that reached NOBODY is an error the customer should see.
+  if (!delivered.length) return json(502, { ok: false, error: "Email service error", sentTo: [], failedTo: failed });
+
+  // 2) Client confirmation. In sandbox it goes to the account owner as a preview (Resend's
+  //    test rule); once live it goes to the real customer. A failure here never breaks the booking.
   let client = { ok: true, skipped: true };
   if (clientEmail) {
-    const to = (sandbox ? fallbackTo : clientEmail).trim().toLowerCase();
+    const to = norm(sandbox ? OWNER_EMAIL : clientEmail);
     const subject2 = sandbox
-      ? "[TEST, would send to " + clientEmail + "] Region Byg, booking received"
-      : "Region Byg, booking modtaget / received";
+      ? "[TEST, ville være sendt til " + clientEmail + "] " + T.subject
+      : T.subject;
     client = await sendEmail(KEY, { from, to, subject: subject2, html: clientHtml });
+    if (!client.ok) console.error("Client confirmation failed:", client.status || "", client.error);
   }
 
-  if (!client.ok) console.error("Client confirmation failed:", client.status || "", client.error);
-  return json(200, { ok: true });
+  // 3) Self-check. Resend can accept an email and the receiving mail host can still bounce it,
+  //    or Resend can silently suppress an address that bounced before. Ask Resend what really
+  //    happened to the company copy and, if it went wrong, tell the backup inbox exactly why.
+  let companyStatus = null;
+  const companyCopy = deliveries.find(d => d.ok && d.to === COMPANY_EMAIL && d.id);
+  if (companyCopy) {
+    await new Promise(r => setTimeout(r, 2500));
+    companyStatus = await emailStatus(KEY, companyCopy.id);
+    if (["bounced", "suppressed", "failed", "canceled", "complained"].includes(companyStatus)) {
+      console.error("Company copy status:", companyStatus);
+      const backup = deliveries.find(d => d.ok && d.to !== COMPANY_EMAIL);
+      await sendEmail(KEY, {
+        from: businessFrom, to: backup ? backup.to : norm(OWNER_EMAIL),
+        subject: "OBS: kopien til " + COMPANY_EMAIL + " blev ikke leveret (" + companyStatus + ")",
+        html: wrap(note("Advarsel: Resend rapporterer status <b>" + esc(companyStatus) + "</b> for kopien af en henvendelse til " + esc(COMPANY_EMAIL) + ". Henvendelsen er leveret her i stedet. Hvis status er <b>suppressed</b>: fjern adressen under Suppressions i Resend. Hvis den er <b>bounced</b>: mailværten afviser mail afsendt via Resend, og kontakt@ bør have en allow-regel eller videresendelse.") + "<p style='font:400 13px Arial,sans-serif;color:#3a3630'>Emne på henvendelsen: " + esc(subject) + "</p>")
+      });
+    }
+  }
+
+  // The response shows where every copy went, so one test booking explains itself
+  // without opening the Resend dashboard (addresses and status codes only, no error text).
+  return json(200, {
+    ok: true, sandbox, from, companyStatus, sentTo: delivered, failedTo: failed, confirmationSent: !!(clientEmail && client.ok),
+    ...(delivered.includes(COMPANY_EMAIL) ? {} : { warning: COMPANY_EMAIL + " was not reached; the booking was delivered to the backup inbox" })
+  });
 };
 
 async function sendEmail(key, msg) {
@@ -166,6 +245,13 @@ async function sendEmail(key, msg) {
   }
 }
 
+async function emailStatus(key, id) {
+  try {
+    const r = await fetch("https://api.resend.com/emails/" + encodeURIComponent(id), { headers: { Authorization: "Bearer " + key } });
+    const data = await r.json().catch(() => ({}));
+    return (r.ok && data && (data.last_event || data.status)) || null;
+  } catch (e) { return null; }
+}
 function domainNotVerified(r) {
   return (r.status === 403 || r.status === 422) && /verif|domain|testing emails|own email/i.test(String(r.error || ""));
 }

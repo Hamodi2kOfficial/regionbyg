@@ -60,11 +60,11 @@ Set these in Netlify, Site settings, Environment variables:
 | Variable | Required | Meaning |
 |---|---|---|
 | `RESEND_API_KEY` | yes | Resend API key (`re_...`) |
-| `RB_NOTIFY_EMAIL` | no | Inbox that receives bookings (default: `kontakt@regionbyg.dk`) |
+| (not used) | no | The company inbox is fixed to `kontakt@regionbyg.dk` in code. An old `RB_NOTIFY_EMAIL` setting in Netlify is ignored and can be deleted |
 | `RB_FROM` | no | Sender (default: `Region Byg <booking@regionbyg.dk>`) |
-| `RB_FALLBACK_EMAIL` | no | Resend account owner's inbox, used only while regionbyg.dk is not yet verified in Resend |
+| `RB_NOTIFY_ALSO` | no | Backup inboxes that ALSO get every booking, as separate emails (comma separated; default: the Resend account owner; `none` switches it off). It can only add recipients, never replace `kontakt@regionbyg.dk` |
 
-**Going live is automatic.** The function always tries `booking@regionbyg.dk` to `kontakt@regionbyg.dk` first. Until regionbyg.dk is verified in Resend (DNS records added), Resend refuses that, so the function falls back to the test inbox with a clear banner and no booking is lost. The moment the domain is verified, bookings go to `kontakt@regionbyg.dk` and customers get their confirmation, with no code or settings change.
+**Every booking is delivered twice, on purpose.** It goes to `kontakt@regionbyg.dk` and, as a separate independent email, to the backup inbox. Mail sent from regionbyg.dk to regionbyg.dk can be quietly filtered by the domain mail host, so the backup copy guarantees nobody loses a booking. If regionbyg.dk is not verified in Resend, the function falls back to the sandbox sender and the account owner inbox with a clear banner. The response of `/api/notify` lists `sentTo` and `failedTo`, so one test booking shows exactly where every copy went.
 
 The function only accepts requests from regionbyg.dk, www.regionbyg.dk, its own host and
 *.netlify.app addresses, validates and size-limits all input, and only forwards safe
