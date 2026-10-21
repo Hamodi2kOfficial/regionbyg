@@ -80,6 +80,77 @@ rejected attachment, company address refused outright, and Resend fully down.
   not check the Resend dashboard (no browser access, and a login attempt
   burned an entire session's usage limit).
 
+## The solution, if the test booking still does not arrive
+
+If the mail is missing, the cause is no longer the code. There are only two
+possibilities and the Resend status tells you which:
+
+**A. Resend says Bounced** — the recipient server rejected it. The bounce text
+names the reason; fix that and nothing below is needed.
+
+**B. Resend says Delivered, but it is not in the inbox or the spam folder** —
+this is the likely one. The mail is sent *from* `booking@regionbyg.dk` *to*
+`kontakt@regionbyg.dk`. Both are the same domain, but the mail comes from
+Resend's servers, not Simply.com's. Simply.com therefore sees inbound mail
+claiming to be from its own domain, sent by a server it does not recognise,
+which is exactly what spoofed mail looks like — so it is silently quarantined
+or discarded. Authentication is the usual culprit for spam placement.
+
+### Fix B, in order. Stop as soon as a test booking arrives.
+
+**Step 1 — publish the authentication records Resend asks for.**
+In Resend → Domains → `regionbyg.dk`, Resend lists the exact DNS records it
+needs. The DKIM value is unique per domain, so it must be copied from there,
+not guessed. Add them in Simply.com → DNS Administration. Expect roughly:
+a DKIM `TXT` at host `resend._domainkey`, an SPF `TXT` and an `MX` on the
+sending host. Two pitfalls that break this:
+
+- **Never create a second SPF record on the same host.** Simply.com already has
+  one for its own mail. Two SPF records cause an immediate PermError and break
+  authentication altogether. If a record exists on that host, merge Resend's
+  `include:` into the existing one instead of adding another.
+- **Simply.com appends the domain to the Host field.** Enter `resend._domainkey`,
+  not `resend._domainkey.regionbyg.dk`, or you create
+  `resend._domainkey.regionbyg.dk.regionbyg.dk` and verification never passes.
+
+Then add DMARC if it is absent: `TXT` at host `_dmarc`, value
+`v=DMARC1; p=none; rua=mailto:kontakt@regionbyg.dk`. Resend does not set this
+up automatically but strongly recommends it. Wait for Resend to show the domain
+as Verified, then send another test booking.
+
+**Step 2 — if it still does not arrive, move the sender to a subdomain.**
+This is the robust fix and is Resend's own recommended setup. Verify
+`send.regionbyg.dk` as a separate domain in Resend and send from
+`booking@send.regionbyg.dk`. It solves the problem three ways at once: the From
+domain is no longer identical to the receiving domain, so the self-spoofing
+heuristic stops firing; the subdomain gets its own SPF record, so Simply.com's
+root SPF is never touched and cannot PermError; and the subdomain's sending
+reputation is kept separate from the company's normal mail.
+
+To apply it, set the Netlify variable `RB_FROM` to
+`Region Byg <booking@send.regionbyg.dk>`. No code change is needed — the
+function reads that variable. If this becomes permanent, also update the
+default value in both copies of `notify.js` so a missing variable doesn't fall
+back to the root domain, and commit that.
+
+Replies still work: the function already sets `reply_to` to the customer's own
+address, so hitting Reply on a booking goes to the customer, not the subdomain.
+
+**Step 3 — only if 1 and 2 both fail.** Ask Simply.com support to check their
+inbound mail log for a message from Resend to `kontakt@regionbyg.dk` at the
+timestamp of the test, and whether a filter quarantined it. Resend showing
+Delivered means their server accepted it, so they can see what happened to it
+afterwards. As a stopgap while that is open, add a second business recipient
+that is not on `regionbyg.dk` so bookings are never invisible — or set
+forwarding from `kontakt@regionbyg.dk` to a Gmail address in Simply.com.
+
+### How to tell it worked
+
+Send a test booking and confirm all three: it arrives in the
+`kontakt@regionbyg.dk` inbox, not the spam folder; Resend shows Delivered; and
+the Gmail inbox gets nothing. Then delete the obsolete `RB_NOTIFY_EMAIL`
+variable from Netlify, since nothing reads it any more.
+
 ## What I need from you
 
 1. Do not try to log into Resend or Netlify yourself. You almost certainly
@@ -91,17 +162,16 @@ rejected attachment, company address refused outright, and Resend fully down.
      `RB_NOTIFY_EMAIL` variable from Netlify, since nothing reads it any more.
    - **If it did not arrive** → ask me for the status of the newest email to
      `kontakt@regionbyg.dk` at resend.com/emails: Delivered, Bounced or Delayed.
-     I'll paste it or screenshot it.
-     - **Delivered** → the code and Resend are fine; it's being filtered on the
-       Simply.com side. Walk me through the DNS records for `regionbyg.dk`:
-       Resend's required SPF/DKIM entries alongside Simply.com's existing ones,
-       with exactly ONE SPF record containing both, plus DMARC and the
-       Simply.com spam/quarantine folder.
-     - **Bounced** → read me the bounce reason and fix accordingly.
-     - **Delayed, or nothing listed at all** → the function isn't reaching
-       Resend. Have me POST a test booking directly to
+     I'll paste it or screenshot it. Then work the matching case in
+     "The solution" above and walk me through it one step at a time, waiting
+     for me to confirm each DNS change before moving on.
+     - **Delayed, or nothing listed at all** → neither case above: the function
+       isn't reaching Resend. Have me POST a test booking directly to
        `https://<my-netlify-site>/api/notify` and read back the `sentTo`,
        `from` and `sandbox` fields the function now returns.
+   - I am not a developer. Give me click-by-click steps for the Resend,
+     Netlify and Simply.com panels, and don't assume I know what SPF or DKIM
+     mean.
 3. Optional, and worth suggesting: connect the Netlify site to the GitHub repo
    (Site configuration → Build & deploy, publish directory `deploy`) so future
    fixes deploy on push instead of by drag-and-drop. That needs the branch
