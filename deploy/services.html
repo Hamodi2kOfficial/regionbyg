@@ -15,11 +15,11 @@
   <meta property="og:description" content="Vælg din kundetype, privat eller erhverv, og se de byggeydelser, der passer til dig hos Region Byg & Rådgivning." />
   <meta property="og:image" content="https://regionbyg.dk/assets/img/banner.jpeg" />
   <meta property="og:url" content="https://regionbyg.dk/services.html" />
+  <link rel="canonical" href="https://regionbyg.dk/services.html" />
   <meta name="twitter:card" content="summary_large_image" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin />
   <script>try{if(localStorage.getItem('rb-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
@@ -28,25 +28,25 @@
 
   <main>
     <section class="section section--photo" style="padding-top:clamp(7rem,14vw,9rem)">
-      <img class="sec-bg" src="assets/img/home-plan.jpg" alt="" aria-hidden="true" />
+      <img class="sec-bg" src="assets/img/home-plan.jpg" alt="" aria-hidden="true"  fetchpriority="high" decoding="async" />
       <span class="sec-overlay"></span>
       <div class="container">
         <div class="section-head section-head--center" data-reveal>
           <span class="eyebrow" data-i18n="choose.eyebrow"></span>
-          <h2 data-i18n="choose.title"></h2>
+          <h1 data-i18n="choose.title"></h1>
           <p data-i18n="choose.lead"></p>
         </div>
 
         <div class="choose-grid">
           <a class="choose-card" href="private.html" data-reveal data-delay="1">
             <span class="choose-card__icon" data-icon="home"></span>
-            <h3 data-i18n="choose.private_title"></h3>
+            <h3 aria-level="2" data-i18n="choose.private_title"></h3>
             <p data-i18n="choose.private_desc"></p>
             <span class="card__link"><span data-i18n="services.view"></span><span data-icon="arrow"></span></span>
           </a>
           <a class="choose-card" href="commercial.html" data-reveal data-delay="2">
             <span class="choose-card__icon" data-icon="building"></span>
-            <h3 data-i18n="choose.commercial_title"></h3>
+            <h3 aria-level="2" data-i18n="choose.commercial_title"></h3>
             <p data-i18n="choose.commercial_desc"></p>
             <span class="card__link"><span data-i18n="services.view"></span><span data-icon="arrow"></span></span>
           </a>

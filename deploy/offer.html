@@ -15,11 +15,11 @@
   <meta property="og:description" content="Anmod om et uforpligtende tilbud fra Region Byg & Rådgivning." />
   <meta property="og:image" content="https://regionbyg.dk/assets/img/banner.jpeg" />
   <meta property="og:url" content="https://regionbyg.dk/offer.html" />
+  <link rel="canonical" href="https://regionbyg.dk/offer.html" />
   <meta name="twitter:card" content="summary_large_image" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin />
   <script>try{if(localStorage.getItem('rb-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
@@ -34,7 +34,7 @@
 
           <div class="section-head" style="margin-bottom:2rem" data-reveal>
             <span class="eyebrow" data-i18n="offer.eyebrow"></span>
-            <h2 data-i18n="offer.title"></h2>
+            <h1 data-i18n="offer.title"></h1>
             <p data-i18n="offer.lead"></p>
           </div>
 
@@ -48,6 +48,7 @@
           </div>
 
           <form id="offerForm" class="form-shell" novalidate>
+            <div class="hp-field" aria-hidden="true"><label>Leave this field empty<input type="text" name="website" tabindex="-1" autocomplete="off" /></label></div>
             <!-- Progress -->
             <div class="progress">
               <div class="progress__bar"><div class="progress__fill" id="progressFill"></div></div>
@@ -59,7 +60,7 @@
 
             <!-- STEP: client type (removed by JS when already known from the URL) -->
             <fieldset class="step is-active" data-clientstep>
-              <h3 data-i18n="offer.ct_title"></h3>
+              <h3 aria-level="2" data-i18n="offer.ct_title"></h3>
               <p data-i18n="offer.ct_desc"></p>
               <div class="choices" data-validate="radio" data-field="clienttype">
                 <label class="choice"><input type="radio" name="clienttype" value="private" /><span data-i18n="choose.private_title"></span></label>
@@ -70,7 +71,7 @@
 
             <!-- STEP 1, help needed -->
             <fieldset class="step" data-step="1">
-              <h3 data-i18n="offer.s1_title"></h3>
+              <h3 aria-level="2" data-i18n="offer.s1_title"></h3>
               <p data-i18n="offer.s1_desc"></p>
               <div class="choices" data-validate="radio" data-field="help">
                 <label class="choice"><input type="radio" name="help" value="construction" /><span data-i18n="offer.help_construction"></span></label>
@@ -87,7 +88,7 @@
 
             <!-- STEP 2, description -->
             <fieldset class="step" data-step="2">
-              <h3 data-i18n="offer.s2_title"></h3>
+              <h3 aria-level="2" data-i18n="offer.s2_title"></h3>
               <p data-i18n="offer.s2_desc"></p>
               <div class="field">
                 <label for="description"><span data-i18n="offer.desc_label"></span> <span class="req">*</span></label>
@@ -99,7 +100,7 @@
 
             <!-- STEP 3, budget + timeline -->
             <fieldset class="step" data-step="3">
-              <h3 data-i18n="offer.s3_title"></h3>
+              <h3 aria-level="2" data-i18n="offer.s3_title"></h3>
               <p data-i18n="offer.s3_desc"></p>
               <div class="field">
                 <label for="budget"><span data-i18n="offer.budget_label"></span> <span class="req">*</span></label>
@@ -121,7 +122,7 @@
 
             <!-- STEP 4, drawings + upload -->
             <fieldset class="step" data-step="4">
-              <h3 data-i18n="offer.s4_title"></h3>
+              <h3 aria-level="2" data-i18n="offer.s4_title"></h3>
               <p data-i18n="offer.s4_desc"></p>
               <div class="choices" style="margin-bottom:1.4rem">
                 <label class="choice"><input type="checkbox" name="drawings" value="have" /><span data-i18n="offer.draw_have"></span></label>
@@ -144,7 +145,7 @@
 
             <!-- STEP 5, additional info -->
             <fieldset class="step" data-step="5">
-              <h3 data-i18n="offer.s5_title"></h3>
+              <h3 aria-level="2" data-i18n="offer.s5_title"></h3>
               <p data-i18n="offer.s5_desc"></p>
               <div class="field">
                 <label for="extra" data-i18n="offer.extra_label"></label>
@@ -154,7 +155,7 @@
 
             <!-- STEP 6, contact -->
             <fieldset class="step" data-step="6">
-              <h3 data-i18n="offer.s6_title"></h3>
+              <h3 aria-level="2" data-i18n="offer.s6_title"></h3>
               <p data-i18n="offer.s6_desc"></p>
               <p class="hint" style="margin-bottom:1.2rem" data-i18n="form.required_note"></p>
               <div class="grid-2">
@@ -219,7 +220,7 @@
           <!-- Success state / confirmation -->
           <div class="form-success form-shell" id="offerSuccess">
             <div class="form-success__icon"><span data-icon="checkCircle"></span></div>
-            <h3 data-i18n="offer.success_title"></h3>
+            <h3 aria-level="2" data-i18n="offer.success_title"></h3>
             <p data-i18n="offer.success_body"></p>
 
             <div data-confirm-contact></div>

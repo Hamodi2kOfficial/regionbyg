@@ -86,16 +86,17 @@ const RB_BRAND_MARK = `
     <rect x="0"  y="84" width="96" height="16" rx="2" fill="var(--accent)"/>
   </svg>`;
 const RB_BRAND = `
-  <a class="brand" href="index.html" aria-label="Region Byg & Rådgivning">
-    ${RB_BRAND_MARK}<span class="brand__word"><span>Region</span><span>Byg &amp;</span><span>Rådgivning <em>ApS</em></span></span>
+  <a class="brand" href="index.html">
+    ${RB_BRAND_MARK}<span class="brand__word"><span>Region</span> <span>Byg &amp;</span> <span>Rådgivning <em>ApS</em></span></span>
   </a>`;
 
 function headerHTML() {
   return `
+  <a class="skip-link" href="#main-content" data-i18n="nav.skip"></a>
   <header class="header">
     <div class="container header__inner">
       ${RB_BRAND}
-      <nav class="nav" aria-label="Primær">
+      <nav class="nav" data-i18n-attr="aria-label:nav.aria_main" aria-label="Primær">
         <div class="nav__links">
           <a href="index.html" data-nav="index.html" data-i18n="nav.home"></a>
           <div class="nav__item nav__item--menu">
@@ -115,7 +116,7 @@ function headerHTML() {
             <button data-lang-btn="da" type="button">DA</button>
             <button data-lang-btn="en" type="button">EN</button>
           </div>
-          <button class="theme-toggle" type="button" aria-label="Skift lyst/mørkt tema" data-theme-toggle>
+          <button class="theme-toggle" type="button" data-i18n-attr="aria-label:nav.aria_theme" aria-label="Skift lyst/mørkt tema" data-theme-toggle>
             <span class="icon-sun" data-icon="sun"></span>
             <span class="icon-moon" data-icon="moon"></span>
           </button>
@@ -149,7 +150,7 @@ function footerHTML() {
           <p data-i18n="footer.tagline"></p>
         </div>
         <div class="footer__col">
-          <h4 data-i18n="footer.col_nav"></h4>
+          <p class="footer__title" data-i18n="footer.col_nav"></p>
           <a href="index.html" data-i18n="nav.home"></a>
           <a href="custom.html" data-i18n="nav.custom"></a>
           <a href="about.html" data-i18n="nav.about"></a>
@@ -158,14 +159,14 @@ function footerHTML() {
           <a href="vilkaar.html" data-i18n="nav.terms"></a>
         </div>
         <div class="footer__col">
-          <h4 data-i18n="footer.col_services"></h4>
+          <p class="footer__title" data-i18n="footer.col_services"></p>
           <a href="private.html" data-i18n="nav.private"></a>
           <a href="commercial.html" data-i18n="nav.commercial"></a>
           <a href="offer.html" data-i18n="nav.offer"></a>
           <a href="consultation.html" data-i18n="nav.consultation"></a>
         </div>
         <div class="footer__col">
-          <h4 data-i18n="footer.col_contact"></h4>
+          <p class="footer__title" data-i18n="footer.col_contact"></p>
           <a href="mailto:Kontakt@regionbyg.dk">Kontakt@regionbyg.dk</a>
           <a href="tel:+4530602660">+45 30 60 26 60</a>
           <span class="footer__cvr" data-i18n="contact.cvr"></span>
@@ -214,6 +215,11 @@ function renderChrome() {
   if (f) f.innerHTML = footerHTML();
   renderConfirmContacts();
 
+  const main = document.querySelector("main");
+  if (main && !main.id) main.id = "main-content";
+  const skip = document.querySelector(".skip-link");
+  if (skip && main) skip.setAttribute("href", "#" + main.id);
+
   // Mark the active top-level nav item
   const page = (location.pathname.split("/").pop() || "index.html") || "index.html";
   document.querySelectorAll(".nav__links [data-nav]").forEach(a => {
@@ -227,7 +233,7 @@ function initHeader() {
   const header = document.querySelector(".header");
   if (!header) return;
   const onScroll = () => header.classList.toggle("is-scrolled", window.scrollY > 24);
-  onScroll();
+  requestAnimationFrame(onScroll);
   window.addEventListener("scroll", onScroll, { passive: true });
 }
 
@@ -244,6 +250,9 @@ function initMobileMenu() {
   };
   burger.addEventListener("click", () => toggle(!menu.classList.contains("is-open")));
   menu.querySelectorAll("a").forEach(a => a.addEventListener("click", () => toggle(false)));
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && menu.classList.contains("is-open")) { toggle(false); burger.focus(); }
+  });
 }
 
 /* ---- Language toggle wiring ---- */
@@ -278,7 +287,7 @@ function renderServices() {
     grid.innerHTML = RB_SERVICES[group].map((s, i) => `
       <article class="card" data-reveal data-delay="${(i % 3) + 1}">
         <span class="card__icon" data-icon="${s.icon}"></span>
-        <h3>${s[lang]}</h3>
+        <h3 aria-level="2">${s[lang]}</h3>
         <p>${s[lang + "_d"]}</p>
         <a class="card__link" href="offer.html?service=${s.slug}&type=${group}">
           <span>${RB_I18N.get("services.request")}</span>
