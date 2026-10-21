@@ -10,3 +10,6 @@ desktop.ini
 ourcustomers/Invoice — First Payment.html
 ourcustomers/Honey Volcano — Raw Forest Honey.html
 ourcustomers/Honey Volcano — Raw Forest Honey_files/
+
+# Zipped copy of deploy/ built for Netlify Drop, regenerate instead of committing
+regionbyg-deploy-fixed.zip
