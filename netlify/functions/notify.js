@@ -136,7 +136,7 @@ exports.handler = async (event) => {
      <table style="border-collapse:collapse;width:100%;border:1px solid #eee;border-radius:8px">${toRows(fields)}</table>
      ${safeAttachments.length ? `<p style="margin:14px 0 0;font:600 13px Arial,sans-serif;color:#1a1714">${safeAttachments.length} fil(er) er vedhæftet denne e-mail.</p>` : ""}
      ${(attachmentsTooLarge && attachmentsTooLarge.length) ? `<p style="margin:8px 0 0;font:400 13px Arial,sans-serif;color:#b45309">Kunden har uploadet filer, der var for store til at vedhæfte: ${esc(attachmentsTooLarge.join(", "))}. Bed kunden sende dem direkte.</p>` : ""}
-     ${clientEmail ? `<p style="margin:16px 0 0;font:400 13px Arial,sans-serif;color:#6b675f">Svar direkte til <a href="mailto:${esc(clientEmail)}">${esc(clientEmail)}</a></p>` : ""}`
+     ${clientEmail ? `<p style="margin:16px 0 0;font:400 13px Arial,sans-serif;color:#6b675f">Svar direkte til ${esc(clientEmail)}</p>` : ""}`
   );
 
   // Confirmation to the customer: Danish by default, English if they used the English site.
@@ -212,30 +212,10 @@ exports.handler = async (event) => {
     if (!client.ok) console.error("Client confirmation failed:", client.status || "", client.error);
   }
 
-  // 3) Self-check. Resend can accept an email and the receiving mail host can still bounce it,
-  //    or Resend can silently suppress an address that bounced before. Ask Resend what really
-  //    happened to the company copy and, if it went wrong, tell the backup inbox exactly why.
-  let companyStatus = null;
-  const companyCopy = deliveries.find(d => d.ok && d.to === COMPANY_EMAIL && d.id);
-  if (companyCopy) {
-    await new Promise(r => setTimeout(r, 2500));
-    companyStatus = await emailStatus(KEY, companyCopy.id);
-    if (["bounced", "suppressed", "failed", "canceled", "complained"].includes(companyStatus)) {
-      console.error("Company copy status:", companyStatus);
-      const backup = deliveries.find(d => d.ok && d.to !== COMPANY_EMAIL);
-      await sendEmail(KEY, {
-        from: businessFrom, to: backup ? backup.to : norm(OWNER_EMAIL),
-        subject: "OBS: kopien til " + COMPANY_EMAIL + " blev ikke leveret (" + companyStatus + ")",
-        text: "OBS: Resend rapporterer status " + companyStatus + " for kopien af en henvendelse til " + COMPANY_EMAIL + ". Henvendelsen er leveret her i stedet. Emne: " + subject,
-        html: wrap(note("Advarsel: Resend rapporterer status <b>" + esc(companyStatus) + "</b> for kopien af en henvendelse til " + esc(COMPANY_EMAIL) + ". Henvendelsen er leveret her i stedet. Hvis status er <b>suppressed</b>: fjern adressen under Suppressions i Resend. Hvis den er <b>bounced</b>: mailværten afviser mail afsendt via Resend, og kontakt@ bør have en allow-regel eller videresendelse.") + "<p style='font:400 13px Arial,sans-serif;color:#3a3630'>Emne på henvendelsen: " + esc(subject) + "</p>")
-      });
-    }
-  }
-
   // The response shows where every copy went, so one test booking explains itself
   // without opening the Resend dashboard (addresses and status codes only, no error text).
   return json(200, {
-    ok: true, sandbox, from, companyStatus, sentTo: delivered, failedTo: failed, confirmationSent: !!(clientEmail && client.ok),
+    ok: true, sandbox, from, sentTo: delivered, failedTo: failed, confirmationSent: !!(clientEmail && client.ok),
     ...(delivered.includes(COMPANY_EMAIL) ? {} : { warning: COMPANY_EMAIL + " was not reached; the booking was delivered to the backup inbox" })
   });
 };
@@ -255,13 +235,6 @@ async function sendEmail(key, msg) {
   }
 }
 
-async function emailStatus(key, id) {
-  try {
-    const r = await fetch("https://api.resend.com/emails/" + encodeURIComponent(id), { headers: { Authorization: "Bearer " + key } });
-    const data = await r.json().catch(() => ({}));
-    return (r.ok && data && (data.last_event || data.status)) || null;
-  } catch (e) { return null; }
-}
 function domainNotVerified(r) {
   return (r.status === 403 || r.status === 422) && /verif|domain|testing emails|own email/i.test(String(r.error || ""));
 }
