@@ -10,16 +10,25 @@
      RB_FROM          (optional)  the "from" address
                                   default: Region Byg <booking@regionbyg.dk>
                                   Must be on a domain verified in Resend.
+     RB_NOTIFY_ALSO   (optional)  extra backup inboxes, comma separated.
+                                  default: officialfarhat2k@gmail.com
+                                  Set it to "none" to switch the backup off.
 
-   The company notification ALWAYS goes to kontakt@regionbyg.dk (COMPANY_EMAIL
-   below). This is deliberately hard-coded: an old RB_NOTIFY_EMAIL variable in
-   Netlify used to override it and silently sent every booking to a Gmail inbox
-   instead. That variable is now ignored, so it can stay in Netlify harmlessly.
+   EVERY booking is sent to kontakt@regionbyg.dk (COMPANY_EMAIL below). That is
+   hard-coded and no environment variable can redirect it: an old
+   RB_NOTIFY_EMAIL variable used to override it and silently sent every booking
+   to a Gmail inbox instead. That variable is now ignored entirely.
 
-   Nothing redirects that address any more, not even Resend's sandbox. If Resend
-   refuses to deliver there (an unverified @resend.dev sender can only reach the
-   account owner), the booking is retried to the account owner's address with a
-   subject saying so, rather than being dropped.
+   The same booking is ALSO sent, as a separate email, to each address in
+   RB_NOTIFY_ALSO. This exists because mail from regionbyg.dk to
+   regionbyg.dk is sent by Resend rather than by the domain's own mail host, so
+   that host may quietly quarantine it as spoofed, and fixing that needs DNS
+   access we do not have. A backup inbox on a different provider is immune to
+   it, so a booking is never lost while the main address is unreliable.
+
+   The sends are independent: one failing never stops the other, and an
+   attachment Resend rejects is retried without the files rather than losing
+   the whole enquiry.
    ============================================================ */
 
 exports.handler = async (event) => {
@@ -48,19 +57,24 @@ exports.handler = async (event) => {
     ? attachments.filter(a => a && a.filename && a.content)
     : [];
 
-  // Where the business copy goes. Hard-coded on purpose, see the note at the top:
-  // no environment variable may redirect the company's own bookings any more.
+  // Where the business copy goes. Hard-coded on purpose, see the note at the
+  // top: no environment variable may redirect the company's own bookings.
   const COMPANY_EMAIL = "kontakt@regionbyg.dk";
-  // Owner of the Resend account, the only address Resend's sandbox will accept.
-  const SANDBOX_FALLBACK_EMAIL = "officialfarhat2k@gmail.com";
+  // Backup inbox on another provider, so a booking survives the company
+  // address being filtered. It is also the Resend account owner, the only
+  // address Resend's sandbox will deliver to.
+  const BACKUP_EMAIL = "officialfarhat2k@gmail.com";
 
   const from = process.env.RB_FROM || "Region Byg <booking@regionbyg.dk>";
-  // Resend "sandbox": with an unverified @resend.dev sender, mail can ONLY reach
-  // the account owner's address, so route there instead of failing outright.
   const sandbox = /@resend\.dev/i.test(from);
-  // ALWAYS the company address, in every configuration. The sandbox address is
-  // only ever tried as a last resort below, if Resend refuses this one.
-  const notifyTo = COMPANY_EMAIL.trim().toLowerCase();
+
+  const clean = (s) => String(s).trim().toLowerCase();
+  // RB_NOTIFY_ALSO can add or replace the backup inboxes, or switch them off
+  // with "none". It can only ADD to the company address, never replace it.
+  const raw = process.env.RB_NOTIFY_ALSO === undefined ? BACKUP_EMAIL : process.env.RB_NOTIFY_ALSO;
+  const extras = raw.split(",").map(clean).filter(a => a && a !== "none" && a.includes("@"));
+  const notifyTo = clean(COMPANY_EMAIL);
+  const recipients = [notifyTo, ...extras].filter((a, i, all) => all.indexOf(a) === i);
 
   const rows = Object.entries(fields).map(([k, v]) =>
     `<tr>
@@ -85,36 +99,31 @@ exports.handler = async (event) => {
      <p style="margin:18px 0 0;color:#6b675f;font:400 13px Arial,sans-serif">Region Byg &amp; Rådgivning · Kontakt@regionbyg.dk · +45 30 60 26 60</p>`
   );
 
-  // 1) Business notification. Every booking must reach the company address, so
-  //    this is tried up to three ways before we give up on it.
-  const businessBase = { from, to: notifyTo, reply_to: clientEmail || undefined, subject };
-  let business = await sendEmail(KEY, {
-    ...businessBase, html: businessHtml,
-    ...(safeAttachments.length ? { attachments: safeAttachments } : {})
-  });
-
-  // 1b) A rejected or oversized attachment must not cost us the whole booking:
-  //     resend the same details without the files, listing them by name instead.
-  if (!business.ok && safeAttachments.length) {
-    const names = safeAttachments.map(a => a.filename).join(", ");
-    const retry = await sendEmail(KEY, {
-      ...businessBase,
-      html: businessHtml + note("The customer's files could not be attached (" + esc(names) + "). Ask them to email these directly.")
+  // 1) Business notification. One independent email per recipient, so a
+  //    failure for one address never costs the others their copy.
+  async function sendBusinessTo(to) {
+    const base = { from, to, reply_to: clientEmail || undefined, subject };
+    let r = await sendEmail(KEY, {
+      ...base, html: businessHtml,
+      ...(safeAttachments.length ? { attachments: safeAttachments } : {})
     });
-    if (retry.ok) business = { ...retry, attachmentsDropped: names };
+    // A rejected or oversized attachment must not cost us the whole booking:
+    // resend the same details without the files, listing them by name instead.
+    if (!r.ok && safeAttachments.length) {
+      const names = safeAttachments.map(a => a.filename).join(", ");
+      const retry = await sendEmail(KEY, {
+        ...base,
+        html: businessHtml + note("The customer's files could not be attached (" + esc(names) + "). Ask them to email these directly.")
+      });
+      if (retry.ok) r = { ...retry, attachmentsDropped: names };
+    }
+    return { to, ...r };
   }
 
-  // 1c) Last resort, so a booking is never lost in silence. This is what the
-  //     Resend sandbox needs (an unverified sender can only reach the account
-  //     owner), and it also covers the company address being rejected outright.
-  let businessFallback;
-  if (!business.ok) {
-    businessFallback = await sendEmail(KEY, {
-      ...businessBase, to: SANDBOX_FALLBACK_EMAIL,
-      subject: "[could not reach " + notifyTo + "] " + subject,
-      html: businessHtml + note("Resend refused to deliver this booking to " + esc(notifyTo) + ": " + esc(String(business.error)))
-    });
-  }
+  const deliveries = await Promise.all(recipients.map(sendBusinessTo));
+  const toCompany = deliveries.find(d => d.to === notifyTo) || { ok: false, error: "not attempted" };
+  // The booking is safe as long as ONE inbox received it.
+  const business = { ok: deliveries.some(d => d.ok), deliveries };
 
   // 2) Client confirmation. In sandbox it's routed to YOUR inbox (a preview) so
   //    nothing violates Resend's test rule; after domain verification it goes to
@@ -123,26 +132,31 @@ exports.handler = async (event) => {
   if (clientEmail) {
     // In sandbox the preview must go to the Resend account owner, the only
     // recipient an unverified sender is allowed to reach.
-    const to = (sandbox ? SANDBOX_FALLBACK_EMAIL : clientEmail).trim().toLowerCase();
+    const to = clean(sandbox ? BACKUP_EMAIL : clientEmail);
     const subject2 = sandbox
       ? "[TEST, would send to " + clientEmail + "] Region Byg, booking received"
       : "Region Byg, booking modtaget / received";
     client = await sendEmail(KEY, { from, to, subject: subject2, html: clientHtml });
   }
 
-  // sentTo/sandbox are echoed back so a single test booking shows exactly where
-  // the company copy went, without needing the Resend dashboard.
-  const meta = { sentTo: notifyTo, from, sandbox, ...(businessFallback ? { businessFallback } : {}) };
+  // Echoed back so a single test booking shows exactly where every copy went,
+  // and whether Resend accepted it, without opening the Resend dashboard.
+  const meta = {
+    from, sandbox,
+    sentTo: deliveries.filter(d => d.ok).map(d => d.to),
+    failedTo: deliveries.filter(d => !d.ok).map(d => ({ to: d.to, error: d.error }))
+  };
 
-  // Only a booking that reached nobody at all is a failure the customer should
-  // see. If the fallback got through, the booking is safe, so confirm it and
-  // report the problem in the payload instead (the fallback mail's own subject
-  // line already says the company address could not be reached).
+  // Only a booking that reached NOBODY is a failure the customer should see.
   if (!business.ok) {
-    if (businessFallback && businessFallback.ok) {
-      return json(200, { ok: true, warning: "Delivered to the fallback address, " + notifyTo + " could not be reached: " + business.error, business, client, ...meta });
-    }
-    return json(502, { ok: false, error: business.error, business, client, ...meta });
+    return json(502, { ok: false, error: toCompany.error, business, client, ...meta });
+  }
+  if (!toCompany.ok) {
+    return json(200, {
+      ok: true,
+      warning: notifyTo + " could not be reached (" + toCompany.error + "), the booking was delivered to the backup inbox instead",
+      business, client, ...meta
+    });
   }
   return json(200, { ok: true, business, client, ...meta });
 };

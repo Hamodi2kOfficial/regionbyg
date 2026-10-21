@@ -80,76 +80,59 @@ rejected attachment, company address refused outright, and Resend fully down.
   not check the Resend dashboard (no browser access, and a login attempt
   burned an entire session's usage limit).
 
-## The solution, if the test booking still does not arrive
+## The solution that is now in the code
 
-If the mail is missing, the cause is no longer the code. There are only two
-possibilities and the Resend status tells you which:
+**Hard constraint: I have NO access to Simply.com**, which hosts `regionbyg.dk`
+mail and its DNS. So no SPF/DKIM/DMARC change, no mail-filter change and no
+forwarding rule is available. Any fix must work from code, Netlify and Resend
+alone. Do not propose DNS edits.
 
-**A. Resend says Bounced** — the recipient server rejected it. The bounce text
-names the reason; fix that and nothing below is needed.
+**Why the mail goes missing.** The booking is sent *from* `booking@regionbyg.dk`
+*to* `kontakt@regionbyg.dk` — the same domain, but from Resend's servers rather
+than the domain's own mail host. The host therefore sees inbound mail claiming
+to be from itself, sent by a server it doesn't recognise, which is what spoofing
+looks like, so it quietly quarantines or discards it. Nothing bounces, so Resend
+still reports "Delivered". Fixing that properly needs the DNS access we don't
+have.
 
-**B. Resend says Delivered, but it is not in the inbox or the spam folder** —
-this is the likely one. The mail is sent *from* `booking@regionbyg.dk` *to*
-`kontakt@regionbyg.dk`. Both are the same domain, but the mail comes from
-Resend's servers, not Simply.com's. Simply.com therefore sees inbound mail
-claiming to be from its own domain, sent by a server it does not recognise,
-which is exactly what spoofed mail looks like — so it is silently quarantined
-or discarded. Authentication is the usual culprit for spam placement.
+**What the code does instead.** Every booking is now sent as TWO independent
+emails: one to `kontakt@regionbyg.dk`, and one to a backup inbox on a different
+provider (`officialfarhat2k@gmail.com` by default). Independent sends, so one
+being filtered or refused cannot affect the other. A booking therefore always
+reaches someone, whatever the mail host does with the regionbyg.dk copy. This
+needs no DNS and no Simply.com access, which is exactly why it was chosen.
 
-### Fix B, in order. Stop as soon as a test booking arrives.
+The backup list is the Netlify variable `RB_NOTIFY_ALSO`: comma-separated
+addresses, or `none` to switch the backup off once `kontakt@regionbyg.dk` is
+proven reliable. It can only ADD recipients — it cannot replace or remove
+`kontakt@regionbyg.dk`, which stays hard-coded precisely because an overriding
+variable caused the original bug.
 
-**Step 1 — publish the authentication records Resend asks for.**
-In Resend → Domains → `regionbyg.dk`, Resend lists the exact DNS records it
-needs. The DKIM value is unique per domain, so it must be copied from there,
-not guessed. Add them in Simply.com → DNS Administration. Expect roughly:
-a DKIM `TXT` at host `resend._domainkey`, an SPF `TXT` and an `MX` on the
-sending host. Two pitfalls that break this:
+**This is a workaround, not a cure.** The regionbyg.dk copy may still be
+filtered; the point is that a booking is no longer lost when it is. The real
+cure needs one of these, all of which need access I don't have:
 
-- **Never create a second SPF record on the same host.** Simply.com already has
-  one for its own mail. Two SPF records cause an immediate PermError and break
-  authentication altogether. If a record exists on that host, merge Resend's
-  `include:` into the existing one instead of adding another.
-- **Simply.com appends the domain to the Host field.** Enter `resend._domainkey`,
-  not `resend._domainkey.regionbyg.dk`, or you create
-  `resend._domainkey.regionbyg.dk.regionbyg.dk` and verification never passes.
+- Whoever controls `regionbyg.dk` DNS (the Simply.com account holder, likely the
+  person who set up the domain or verified it in Resend) adds Resend's DKIM/SPF
+  records and a DMARC record, and ideally moves sending to a subdomain such as
+  `send.regionbyg.dk` so the From domain stops matching the recipient's domain.
+  Then set `RB_FROM` to `Region Byg <booking@send.regionbyg.dk>` in Netlify — a
+  variable change, no code change.
+- Or the mailbox owner adds a Simply.com filter rule allowlisting mail from
+  Resend, or forwards `kontakt@regionbyg.dk` to an inbox elsewhere.
 
-Then add DMARC if it is absent: `TXT` at host `_dmarc`, value
-`v=DMARC1; p=none; rua=mailto:kontakt@regionbyg.dk`. Resend does not set this
-up automatically but strongly recommends it. Wait for Resend to show the domain
-as Verified, then send another test booking.
+Note: the domain IS already verified in Resend, because customer confirmations
+send successfully from `booking@regionbyg.dk`. So some DNS records exist
+already. Ask me who set that up — that person can finish the job above.
 
-**Step 2 — if it still does not arrive, move the sender to a subdomain.**
-This is the robust fix and is Resend's own recommended setup. Verify
-`send.regionbyg.dk` as a separate domain in Resend and send from
-`booking@send.regionbyg.dk`. It solves the problem three ways at once: the From
-domain is no longer identical to the receiving domain, so the self-spoofing
-heuristic stops firing; the subdomain gets its own SPF record, so Simply.com's
-root SPF is never touched and cannot PermError; and the subdomain's sending
-reputation is kept separate from the company's normal mail.
+### How to tell the fix is working
 
-To apply it, set the Netlify variable `RB_FROM` to
-`Region Byg <booking@send.regionbyg.dk>`. No code change is needed — the
-function reads that variable. If this becomes permanent, also update the
-default value in both copies of `notify.js` so a missing variable doesn't fall
-back to the root domain, and commit that.
-
-Replies still work: the function already sets `reply_to` to the customer's own
-address, so hitting Reply on a booking goes to the customer, not the subdomain.
-
-**Step 3 — only if 1 and 2 both fail.** Ask Simply.com support to check their
-inbound mail log for a message from Resend to `kontakt@regionbyg.dk` at the
-timestamp of the test, and whether a filter quarantined it. Resend showing
-Delivered means their server accepted it, so they can see what happened to it
-afterwards. As a stopgap while that is open, add a second business recipient
-that is not on `regionbyg.dk` so bookings are never invisible — or set
-forwarding from `kontakt@regionbyg.dk` to a Gmail address in Simply.com.
-
-### How to tell it worked
-
-Send a test booking and confirm all three: it arrives in the
-`kontakt@regionbyg.dk` inbox, not the spam folder; Resend shows Delivered; and
-the Gmail inbox gets nothing. Then delete the obsolete `RB_NOTIFY_EMAIL`
-variable from Netlify, since nothing reads it any more.
+After the Netlify upload, one test booking should put the enquiry in the backup
+inbox every single time. That is the part that must never fail again. Whether
+the `kontakt@regionbyg.dk` copy also lands tells us if the filtering is still
+happening. The function's JSON response reports `sentTo`, `failedTo`, `from`
+and `sandbox`, so a direct POST to `https://<my-netlify-site>/api/notify`
+answers it without the Resend dashboard.
 
 ## What I need from you
 
@@ -162,9 +145,8 @@ variable from Netlify, since nothing reads it any more.
      `RB_NOTIFY_EMAIL` variable from Netlify, since nothing reads it any more.
    - **If it did not arrive** → ask me for the status of the newest email to
      `kontakt@regionbyg.dk` at resend.com/emails: Delivered, Bounced or Delayed.
-     I'll paste it or screenshot it. Then work the matching case in
-     "The solution" above and walk me through it one step at a time, waiting
-     for me to confirm each DNS change before moving on.
+     I'll paste it or screenshot it. Remember I cannot change DNS, so use it
+     only to understand what is happening, not to hand me DNS steps.
      - **Delayed, or nothing listed at all** → neither case above: the function
        isn't reaching Resend. Have me POST a test booking directly to
        `https://<my-netlify-site>/api/notify` and read back the `sentTo`,
@@ -172,7 +154,9 @@ variable from Netlify, since nothing reads it any more.
    - I am not a developer. Give me click-by-click steps for the Resend,
      Netlify and Simply.com panels, and don't assume I know what SPF or DKIM
      mean.
-3. Optional, and worth suggesting: connect the Netlify site to the GitHub repo
+3. If the backup inbox is receiving bookings reliably, that is the problem
+   solved for day-to-day use. Say so plainly rather than leaving it open.
+4. Optional, and worth suggesting: connect the Netlify site to the GitHub repo
    (Site configuration → Build & deploy, publish directory `deploy`) so future
    fixes deploy on push instead of by drag-and-drop. That needs the branch
    merged into `main`, so ask me before merging.
@@ -183,6 +167,7 @@ variable from Netlify, since nothing reads it any more.
 - Company address every booking must reach: `kontakt@regionbyg.dk`
 - Netlify variables that still matter: `RESEND_API_KEY` (required), `RB_FROM`
 - Obsolete and ignored: `RB_NOTIFY_EMAIL`
-- Mail host for regionbyg.dk: Simply.com
+- Backup inbox list: `RB_NOTIFY_ALSO` (comma separated, or `none` to disable)
+- Mail host and DNS for regionbyg.dk: Simply.com, which I CANNOT access
 - Any code fix must exist inside `deploy/` before the Netlify upload, and both
   copies of `notify.js` and `api.js` must be kept identical.
