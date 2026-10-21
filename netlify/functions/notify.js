@@ -12,13 +12,12 @@
      RB_FROM            (optional)  the "from" address
                                     default: Region Byg <booking@regionbyg.dk>
                                     (must be on a domain verified in Resend)
-     RB_NOTIFY_ALSO     (optional)  extra backup inboxes, comma separated
-                                    default: officialfarhat2k@gmail.com
-                                    "none" switches the backup off
+     RB_NOTIFY_ALSO     (optional)  extra inboxes that ALSO get every booking, comma
+                                    separated. Off by default (bookings go only to
+                                    kontakt@regionbyg.dk).
 
-   Every booking goes to kontakt@regionbyg.dk AND, as a separate independent email,
-   to the backup inbox(es) in RB_NOTIFY_ALSO (default: the Resend account owner;
-   "none" switches the backup off). Live mode is automatic: as soon as regionbyg.dk
+   Every booking goes to kontakt@regionbyg.dk. Extra inboxes can be added with
+   RB_NOTIFY_ALSO (off by default), each sent as a separate independent email. Live mode is automatic: as soon as regionbyg.dk
    is verified in Resend, customers get their confirmation.
    ============================================================ */
 
@@ -107,9 +106,9 @@ exports.handler = async (event) => {
   // filtered by the domain's own mail host; Gmail is immune to that).
   const OWNER_EMAIL = "officialfarhat2k@gmail.com";
   const norm = (s) => String(s).trim().toLowerCase();
-  // RB_NOTIFY_ALSO adds extra backup inboxes (comma separated) or switches them off with "none".
+  // RB_NOTIFY_ALSO is OFF unless set: it can add extra inboxes (comma separated).
   // It can only ADD recipients; it can never replace or remove the company inbox.
-  const alsoRaw = process.env.RB_NOTIFY_ALSO === undefined ? OWNER_EMAIL : process.env.RB_NOTIFY_ALSO;
+  const alsoRaw = process.env.RB_NOTIFY_ALSO || "none";   // OFF by default: bookings go only to the company inbox
   const extras = alsoRaw.split(",").map(norm).filter(x => x && x !== "none" && EMAIL_RE.test(x));
   let from = LIVE_FROM;
   let sandbox = /@resend\.dev/i.test(from);
