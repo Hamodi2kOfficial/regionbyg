@@ -18,9 +18,10 @@
         https://app.netlify.com/drop).
      3. Netlify → Site settings → Environment variables → add:
           RESEND_API_KEY  = re_your_key
-          RB_NOTIFY_EMAIL = Officialfarhat2k@gmail.com   (test inbox)
-        (optional, after you verify regionbyg.dk in Resend:)
-          RB_FROM = Region Byg <booking@regionbyg.dk>
+          RB_FROM = Region Byg <booking@regionbyg.dk>   (verified domain)
+        The business copy always goes to kontakt@regionbyg.dk. An older
+        RB_NOTIFY_EMAIL variable used to override that and send bookings to a
+        Gmail inbox instead, it is now ignored by the function.
      4. Re-deploy. Done, every booking now emails you + the client.
 
    Testing note: on plain localhost (no Netlify) the function doesn't

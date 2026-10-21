@@ -7,15 +7,18 @@
 
    Set these in Netlify → Site settings → Environment variables:
      RESEND_API_KEY   (required)  your Resend key, e.g. re_xxxxx
-     RB_NOTIFY_EMAIL  (optional)  where YOU get notified
-                                  default: Officialfarhat2k@gmail.com
      RB_FROM          (optional)  the "from" address
-                                  default: Region Byg <onboarding@resend.dev>
-                                  ↑ Resend's sandbox sender. It can only email
-                                    YOUR OWN Resend account address until you
-                                    verify a domain. After verifying regionbyg.dk,
-                                    set this to e.g.  Region Byg <booking@regionbyg.dk>
-                                    and client confirmations will work for everyone.
+                                  default: Region Byg <booking@regionbyg.dk>
+                                  Must be on a domain verified in Resend.
+
+   The company notification ALWAYS goes to kontakt@regionbyg.dk (COMPANY_EMAIL
+   below). This is deliberately hard-coded: an old RB_NOTIFY_EMAIL variable in
+   Netlify used to override it and silently sent every booking to a Gmail inbox
+   instead. That variable is now ignored, so it can stay in Netlify harmlessly.
+
+   The ONLY exception is Resend's sandbox (when RB_FROM is unset / still points
+   at @resend.dev): Resend then refuses to deliver to anything but the account
+   owner's own address, so we fall back to it so testing still works.
    ============================================================ */
 
 exports.handler = async (event) => {
@@ -44,15 +47,18 @@ exports.handler = async (event) => {
     ? attachments.filter(a => a && a.filename && a.content)
     : [];
 
-  const from = process.env.RB_FROM || "Region Byg <onboarding@resend.dev>";
-  // lowercase/trim: Resend's sandbox allow-list is case-sensitive, so "Official…"
-  // must be sent as "official…" to match the account address exactly.
-  const notifyTo = (process.env.RB_NOTIFY_EMAIL || "officialfarhat2k@gmail.com").trim().toLowerCase();
-  // Resend "sandbox": until a domain is verified, mail can ONLY reach your own
-  // account address. While the from-address is the sandbox one, route everything
-  // to notifyTo so testing always succeeds (no "can only send to your own email"
-  // error). After you verify regionbyg.dk and set RB_FROM, real client emails flow.
+  // Where the business copy goes. Hard-coded on purpose, see the note at the top:
+  // no environment variable may redirect the company's own bookings any more.
+  const COMPANY_EMAIL = "kontakt@regionbyg.dk";
+  // Owner of the Resend account, the only address Resend's sandbox will accept.
+  const SANDBOX_FALLBACK_EMAIL = "officialfarhat2k@gmail.com";
+
+  const from = process.env.RB_FROM || "Region Byg <booking@regionbyg.dk>";
+  // Resend "sandbox": with an unverified @resend.dev sender, mail can ONLY reach
+  // the account owner's address, so route there instead of failing outright.
   const sandbox = /@resend\.dev/i.test(from);
+  // lowercase/trim: Resend's sandbox allow-list is case-sensitive.
+  const notifyTo = (sandbox ? SANDBOX_FALLBACK_EMAIL : COMPANY_EMAIL).trim().toLowerCase();
 
   const rows = Object.entries(fields).map(([k, v]) =>
     `<tr>
@@ -96,8 +102,11 @@ exports.handler = async (event) => {
     client = await sendEmail(KEY, { from, to, subject: subject2, html: clientHtml });
   }
 
-  if (!business.ok) return json(502, { ok: false, error: business.error, business, client });
-  return json(200, { ok: true, business, client });
+  // sentTo/sandbox are echoed back so a single test booking shows exactly where
+  // the company copy went, without needing the Resend dashboard.
+  const meta = { sentTo: notifyTo, from, sandbox };
+  if (!business.ok) return json(502, { ok: false, error: business.error, business, client, ...meta });
+  return json(200, { ok: true, business, client, ...meta });
 };
 
 async function sendEmail(key, msg) {
