@@ -154,23 +154,32 @@ exports.handler = async (event) => {
      <p style="margin:18px 0 0;color:#6b675f;font:400 13px Arial,sans-serif">Region Byg &amp; Rådgivning ApS · Kontakt@regionbyg.dk · +45 30 60 26 60</p>`
   );
 
+  // Plain-text versions: spam filters score HTML-only mail worse, and some mail apps show only text.
+  const toText = (obj) => Object.entries(obj).map(([k, v]) => k + ": " + String(v).replace(/\s*\n\s*/g, " ")).join("\n");
+  const businessText = subject + "\nRegion Byg & Rådgivning, ny henvendelse fra hjemmesiden\n\n" + toText(fields)
+    + (safeAttachments.length ? "\n\n" + safeAttachments.length + " fil(er) er vedhæftet denne e-mail." : "")
+    + (attachmentsTooLarge.length ? "\n\nKunden har uploadet filer, der var for store til at vedhæfte: " + attachmentsTooLarge.join(", ") + ". Bed kunden sende dem direkte." : "")
+    + (clientEmail ? "\n\nSvar direkte til " + clientEmail : "");
+  const clientText = T.hello + (clientName ? ", " + clientName : "") + "!\n\n" + T.body.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&")
+    + "\n\n" + toText(clientFields) + "\n\nRegion Byg & Rådgivning ApS, Kontakt@regionbyg.dk, +45 30 60 26 60";
+
   // 1) Business notification. One independent email per recipient, so a failure
   //    for one address never costs the others their copy.
   const note = (text) => `<p style="margin:0 0 14px;padding:10px 12px;background:#fff6df;border:1px solid #f0dca0;border-radius:8px;color:#7a5900;font:600 13px Arial,sans-serif">${text}</p>`;
-  async function sendBusinessTo(to, html) {
-    const base = { from: businessFrom, to, reply_to: clientEmail || undefined, subject };
+  async function sendBusinessTo(to, html, text) {
+    const base = { from: businessFrom, to, reply_to: clientEmail || undefined, subject, text };
     let r = await sendEmail(KEY, { ...base, html, ...(safeAttachments.length ? { attachments: safeAttachments } : {}) });
     // A rejected attachment must not cost us the whole booking: resend without the
     // files and list them by name instead.
     if (!r.ok && safeAttachments.length && !domainNotVerified(r)) {
       const names = safeAttachments.map(x => x.filename).join(", ");
-      const retry = await sendEmail(KEY, { ...base, html: html + note("Kundens filer kunne ikke vedhæftes (" + esc(names) + "). Bed kunden sende dem direkte.") });
+      const retry = await sendEmail(KEY, { ...base, text: text + "\n\nKundens filer kunne ikke vedhæftes (" + names + "). Bed kunden sende dem direkte.", html: html + note("Kundens filer kunne ikke vedhæftes (" + esc(names) + "). Bed kunden sende dem direkte.") });
       if (retry.ok) r = retry;
     }
     return { to, ...r };
   }
 
-  let deliveries = await Promise.all(recipients.map(to => sendBusinessTo(to, businessHtml)));
+  let deliveries = await Promise.all(recipients.map(to => sendBusinessTo(to, businessHtml, businessText)));
 
   // regionbyg.dk not verified in Resend yet: every live send is refused. Fall back to the
   // sandbox sender and the account owner's inbox so no booking is ever lost. Once the DNS
@@ -181,7 +190,7 @@ exports.handler = async (event) => {
     from = SANDBOX_FROM;
     businessFrom = SANDBOX_FROM;
     const banner = note("Testlevering: regionbyg.dk er endnu ikke verificeret i Resend, så denne henvendelse er sendt til test-indbakken i stedet for " + esc(COMPANY_EMAIL) + ". Videresend den venligst.");
-    deliveries = [await sendBusinessTo(norm(OWNER_EMAIL), banner + businessHtml)];
+    deliveries = [await sendBusinessTo(norm(OWNER_EMAIL), banner + businessHtml, "Testlevering: regionbyg.dk er endnu ikke verificeret i Resend. Videresend denne henvendelse til " + COMPANY_EMAIL + ".\n\n" + businessText)];
   }
 
   deliveries.filter(d => !d.ok).forEach(d => console.error("Business notification to " + d.to + " failed:", d.status || "", d.error));
@@ -199,7 +208,7 @@ exports.handler = async (event) => {
     const subject2 = sandbox
       ? "[TEST, ville være sendt til " + clientEmail + "] " + T.subject
       : T.subject;
-    client = await sendEmail(KEY, { from, to, subject: subject2, html: clientHtml });
+    client = await sendEmail(KEY, { from, to, subject: subject2, html: clientHtml, text: clientText });
     if (!client.ok) console.error("Client confirmation failed:", client.status || "", client.error);
   }
 
@@ -217,6 +226,7 @@ exports.handler = async (event) => {
       await sendEmail(KEY, {
         from: businessFrom, to: backup ? backup.to : norm(OWNER_EMAIL),
         subject: "OBS: kopien til " + COMPANY_EMAIL + " blev ikke leveret (" + companyStatus + ")",
+        text: "OBS: Resend rapporterer status " + companyStatus + " for kopien af en henvendelse til " + COMPANY_EMAIL + ". Henvendelsen er leveret her i stedet. Emne: " + subject,
         html: wrap(note("Advarsel: Resend rapporterer status <b>" + esc(companyStatus) + "</b> for kopien af en henvendelse til " + esc(COMPANY_EMAIL) + ". Henvendelsen er leveret her i stedet. Hvis status er <b>suppressed</b>: fjern adressen under Suppressions i Resend. Hvis den er <b>bounced</b>: mailværten afviser mail afsendt via Resend, og kontakt@ bør have en allow-regel eller videresendelse.") + "<p style='font:400 13px Arial,sans-serif;color:#3a3630'>Emne på henvendelsen: " + esc(subject) + "</p>")
       });
     }
