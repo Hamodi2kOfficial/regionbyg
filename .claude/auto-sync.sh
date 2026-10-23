@@ -28,7 +28,7 @@ if [ -z "$(git status --porcelain)" ]; then
 fi
 
 # 3) stage, then refuse anything that must never reach GitHub
-git add -A
+git add -A 2>/dev/null
 bad=$(git diff --cached --name-only | grep -iE '(^|/)(\.env[^/]*|.*invoice.*|.*honey.*|.*\.pem|.*\.key|settings\.local\.json)$')
 if [ -n "$bad" ]; then
   git reset -q
