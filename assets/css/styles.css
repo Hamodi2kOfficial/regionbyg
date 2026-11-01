@@ -877,3 +877,8 @@ form.is-commercial .cvr-field { display: block; }
 .marquee__logo--tile { height: clamp(46px, 8.5vw, 68px); border-radius: 14px; opacity: 0.92; box-shadow: 0 6px 22px -10px rgba(0, 0, 0, 0.55); }
 [data-theme="light"] .marquee__logo--tile { filter: none; opacity: 0.95; box-shadow: 0 6px 22px -10px rgba(60, 45, 20, 0.35); }
 .marquee__logo--tile:hover { opacity: 1; }
+
+/* Contact links on phones: comfortable 44px tap height without changing the layout */
+@media (pointer: coarse), (max-width: 760px) {
+  .contact-item a { display: inline-block; padding-block: 0.7rem; margin-block: -0.7rem; }
+}

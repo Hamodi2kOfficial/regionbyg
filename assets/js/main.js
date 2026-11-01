@@ -221,9 +221,10 @@ function renderChrome() {
   if (skip && main) skip.setAttribute("href", "#" + main.id);
 
   // Mark the active top-level nav item
-  const page = (location.pathname.split("/").pop() || "index.html") || "index.html";
+  // Works for both /about.html and the pretty /about address Netlify serves.
+  const page = (location.pathname.split("/").pop() || "index").replace(/\.html$/, "");
   document.querySelectorAll(".nav__links [data-nav]").forEach(a => {
-    const matches = a.dataset.nav.split("|");
+    const matches = a.dataset.nav.split("|").map(s => s.replace(/\.html$/, ""));
     if (matches.includes(page)) a.classList.add("is-active");
   });
 }
