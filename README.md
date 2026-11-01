@@ -21,6 +21,13 @@ custom.html           Custom Services
 about.html            About us, full flyer content (welcome, values, categories), construction photo hero
 offer.html            "Get an Offer", 6-step wizard, service + client type auto-populated from URL
 consultation.html     "Book a Consultation", single-step form
+privatlivspolitik.html  Privacy policy (GDPR)
+vilkaar.html          Terms and conditions
+404.html              Not-found page (Netlify serves it automatically)
+robots.txt, sitemap.xml  SEO
+netlify.toml          Security headers (CSP etc.), caching, /api/notify route
+netlify/functions/notify.js  Sends booking emails via Resend
+deploy/               Copy of everything above, this is the folder you drag to Netlify
 assets/
   css/styles.css      Design system (tokens, components, responsive, animations)
   js/
@@ -29,7 +36,8 @@ assets/
     main.js           Shared header/footer (Services dropdown), nav, reveal, dynamic cards, icons
     offer.js          Multi-step wizard logic + validation
     consultation.js   Consultation form logic
-  img/                Brand assets (logo source, banner, flyer)
+  img/                Brand assets (logo source, banner, flyer, customer logos, favicon)
+  fonts/              Self-hosted Inter + Sora (no Google Fonts request)
 ```
 
 **Shared chrome:** the header (with a *Services ▾* dropdown → Private / Commercial),
@@ -42,25 +50,32 @@ service card links to `offer.html?service=<slug>&type=<private|commercial>`, so 
 chosen **client type** is captured in the submission (`data.service.group`), so you know
 up front whether each lead is a private or commercial client.
 
-## Where the back-end plugs in  (assets/js/api.js)
-Every form submits through one function, `RB_API.submit(type, payload)`,
-so going live touches **only this file**:
+## How the forms send email (assets/js/api.js + netlify/functions/notify.js)
+Every form submits through `RB_API.submit(type, payload)`. The browser posts to
+`/api/notify` (a Netlify Function), which emails the business and sends the
+customer a confirmation through Resend. The Resend key never reaches the browser.
 
-1. **HOOK #1, client signal:** `rb:submission` CustomEvent is dispatched on
-   every submit (analytics / fire-and-forget webhook).
-2. **HOOK #2, live transport:** set `RB_API.config.mode = "live"` and
-   `config.endpoint = "<your URL>"`. The form is POSTed as `multipart/form-data`
-   (JSON under `payload`, uploads as `file_0...n`).
-3. **HOOK #3, server endpoint (you build this):**
-   - **3a Google Sheets:** append a row (Apps Script Web App, or Sheets API
-     `spreadsheets.values.append`). The `data` object maps 1:1 to columns.
-   - **3b Notifications:** email to Kontakt@regionbyg.dk (Resend / SendGrid /
-     Nodemailer) and/or SMS / Slack / push.
-   - respond `200 { ok: true, id }`.
+Set these in Netlify, Site settings, Environment variables:
 
-Until then the site runs in **mock mode**: submissions are validated, saved to
-`localStorage` (`rb-submissions`) so nothing is lost, and the success screen
-shows a reference ID. No markup changes are needed to switch to live.
+| Variable | Required | Meaning |
+|---|---|---|
+| `RESEND_API_KEY` | yes | Resend API key (`re_...`) |
+| (not used) | no | The company inbox is fixed to `kontakt@regionbyg.dk` in code. An old `RB_NOTIFY_EMAIL` setting in Netlify is ignored and can be deleted |
+| `RB_FROM` | no | Sender (default: `Region Byg <booking@regionbyg.dk>`) |
+| `RB_NOTIFY_ALSO` | no | Extra inboxes that ALSO get every booking, as separate emails (comma separated). Off by default: bookings go only to `kontakt@regionbyg.dk`. It can only add recipients, never replace the company inbox |
+| `RB_FALLBACK_EMAIL` | no | Inbox that receives bookings ONLY while regionbyg.dk is not verified in Resend. Off by default |
+
+**Every booking goes to `kontakt@regionbyg.dk`, and the person who submitted gets a confirmation. Nobody else.** Both emails (subject, labels, values and text) are in the language the request was submitted in: Danish by default, English if the visitor used the English site. If regionbyg.dk is not verified in Resend, the form shows an error instead of silently redirecting the booking. The response of `/api/notify` lists `sentTo` and `failedTo`, so a test booking shows where every copy went. Optional settings (all off by default): `RB_NOTIFY_ALSO` adds extra inboxes, `RB_FALLBACK_EMAIL` receives bookings while the domain is unverified.
+
+The function only accepts requests from regionbyg.dk, www.regionbyg.dk, its own host and
+*.netlify.app addresses, validates and size-limits all input, and only forwards safe
+attachment types. Spam bots are caught by a hidden honeypot field in both forms.
+On plain localhost the function does not exist, so the site falls back to mock
+mode (logs only, nothing is sent).
+
+## Deploying
+Drag the `deploy/` folder onto Netlify (Deploys tab). `deploy/` must be a copy of
+the project files above, so refresh it after every change.
 
 ## Notes
 - Logo is an inline SVG (brick mark + wordmark) so it recolors per theme and

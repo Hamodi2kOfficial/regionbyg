@@ -173,6 +173,16 @@ const RB_TRANSLATIONS = {
     "contact.cvr": "CVR: 46452666",
     "nav.privacy": "Privatlivspolitik",
     "nav.terms": "Vilkår og betingelser",
+    "nav.aria_main": "Primær",
+    "nav.aria_theme": "Skift lyst/mørkt tema",
+    "nav.skip": "Gå til indhold",
+    "form.err_send": "Beskeden kunne ikke sendes. Prøv igen, eller skriv til Kontakt@regionbyg.dk.",
+    "form.err_files": "Nogle filer blev ikke tilføjet. Maks. 10 filer på 10 MB hver (billeder, PDF, tegninger og dokumenter).",
+    "form.remove": "Fjern fil",
+    "meta.title.404": "Siden findes ikke | Region Byg & Rådgivning",
+    "e404.title": "Siden findes ikke",
+    "e404.body": "Siden du leder efter er flyttet eller findes ikke. Gå til forsiden for at finde det, du leder efter.",
+    "e404.home": "Til forsiden",
     "custom.choose_prompt": "Vælg din kundetype for at fortsætte",
     "offer.custom_service": "Skræddersyet løsning",
     "form.consent": "Jeg accepterer <a href=\"vilkaar.html\" target=\"_blank\" rel=\"noopener\">vilkårene og betingelserne</a> samt <a href=\"privatlivspolitik.html\" target=\"_blank\" rel=\"noopener\">privatlivspolitikken</a> og behandlingen af mine personoplysninger.",
@@ -445,6 +455,16 @@ const RB_TRANSLATIONS = {
     "contact.cvr": "CVR: 46452666",
     "nav.privacy": "Privacy policy",
     "nav.terms": "Terms & conditions",
+    "nav.aria_main": "Main",
+    "nav.aria_theme": "Toggle light/dark theme",
+    "nav.skip": "Skip to content",
+    "form.err_send": "Your message could not be sent. Please try again, or email Kontakt@regionbyg.dk.",
+    "form.err_files": "Some files were not added. Max 10 files of 10 MB each (images, PDF, drawings and documents).",
+    "form.remove": "Remove file",
+    "meta.title.404": "Page not found | Region Byg & Rådgivning",
+    "e404.title": "Page not found",
+    "e404.body": "The page you are looking for has moved or does not exist. Head to the homepage to find what you need.",
+    "e404.home": "Back to homepage",
     "custom.choose_prompt": "Choose your client type to continue",
     "offer.custom_service": "Custom solution",
     "form.consent": "I accept the <a href=\"vilkaar.html\" target=\"_blank\" rel=\"noopener\">terms &amp; conditions</a> and the <a href=\"privatlivspolitik.html\" target=\"_blank\" rel=\"noopener\">privacy policy</a> and the processing of my personal data.",
@@ -643,6 +663,7 @@ const RB_I18N = (() => {
     // Reflect active language on toggles
     document.querySelectorAll("[data-lang-btn]").forEach(btn => {
       btn.classList.toggle("is-active", btn.dataset.langBtn === current);
+      btn.setAttribute("aria-pressed", String(btn.dataset.langBtn === current));
     });
 
     // Let pages react (e.g. re-render dynamic content)

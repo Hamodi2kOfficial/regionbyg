@@ -15,11 +15,11 @@
   <meta property="og:description" content="Velkommen til Region Byg & Rådgivning, kvalitet, gennemsigtighed og tæt samarbejde. Byggeri og rådgivning for private og erhverv." />
   <meta property="og:image" content="https://regionbyg.dk/assets/img/banner.jpeg" />
   <meta property="og:url" content="https://regionbyg.dk/about.html" />
+  <link rel="canonical" href="https://regionbyg.dk/about.html" />
   <meta name="twitter:card" content="summary_large_image" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin />
   <script>try{if(localStorage.getItem('rb-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
@@ -51,7 +51,7 @@
             <p style="color:var(--text-muted);margin-top:1rem" data-i18n="quality.intro4"></p>
           </div>
           <aside class="approach" data-reveal data-delay="2">
-            <h3 data-i18n="quality.approach_title"></h3>
+            <h3 aria-level="2" data-i18n="quality.approach_title"></h3>
             <ul class="checklist">
               <li><span data-icon="check"></span><span data-i18n="quality.approach_1"></span></li>
               <li><span data-icon="check"></span><span data-i18n="quality.approach_2"></span></li>

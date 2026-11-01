@@ -15,11 +15,11 @@
   <meta property="og:description" content="Region Byg & Rådgivning, professionel byggerådgivning og entreprise for private og erhverv. Fra idé og myndighedsgodkendelser til færdigt projekt." />
   <meta property="og:image" content="https://regionbyg.dk/assets/img/banner.jpeg" />
   <meta property="og:url" content="https://regionbyg.dk/" />
+  <link rel="canonical" href="https://regionbyg.dk/" />
   <meta name="twitter:card" content="summary_large_image" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin />
   <script>try{if(localStorage.getItem('rb-theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
@@ -30,7 +30,7 @@
 
     <!-- ============ HERO ============ -->
     <section class="hero section--photo">
-      <img class="sec-bg" src="assets/img/home-build.jpg" alt="" aria-hidden="true" />
+      <img class="sec-bg" src="assets/img/home-build.jpg" alt="" aria-hidden="true"  fetchpriority="high" decoding="async" />
       <span class="sec-overlay"></span>
       <div class="hero__grid"></div>
       <div class="container">
@@ -58,22 +58,22 @@
         <div class="pillars" data-reveal>
           <div class="pillar">
             <span class="pillar__icon" data-icon="home"></span>
-            <h3 data-i18n="pillar.new"></h3>
+            <h3 aria-level="2" data-i18n="pillar.new"></h3>
             <p data-i18n="pillar.new_d"></p>
           </div>
           <div class="pillar">
             <span class="pillar__icon" data-icon="reno"></span>
-            <h3 data-i18n="pillar.reno"></h3>
+            <h3 aria-level="2" data-i18n="pillar.reno"></h3>
             <p data-i18n="pillar.reno_d"></p>
           </div>
           <div class="pillar">
             <span class="pillar__icon" data-icon="advice"></span>
-            <h3 data-i18n="pillar.advice"></h3>
+            <h3 aria-level="2" data-i18n="pillar.advice"></h3>
             <p data-i18n="pillar.advice_d"></p>
           </div>
           <div class="pillar">
             <span class="pillar__icon" data-icon="pm"></span>
-            <h3 data-i18n="pillar.pm"></h3>
+            <h3 aria-level="2" data-i18n="pillar.pm"></h3>
             <p data-i18n="pillar.pm_d"></p>
           </div>
         </div>
@@ -82,7 +82,7 @@
 
     <!-- ============ CLIENT-TYPE CHOOSER ============ -->
     <section class="section section--photo" id="services">
-      <img class="sec-bg" src="assets/img/home-site.jpg" alt="" aria-hidden="true" />
+      <img class="sec-bg" src="assets/img/home-site.jpg" alt="" aria-hidden="true"  loading="lazy" decoding="async" />
       <span class="sec-overlay"></span>
       <div class="container">
         <div class="section-head section-head--center" data-reveal>
@@ -116,8 +116,9 @@
       <div class="marquee" data-marquee>
         <div class="marquee__track">
           <div class="marquee__set">
-            <img class="marquee__logo" src="assets/img/customer-taurus.png" alt="Taurus Ejendomsforvaltning" />
-            <img class="marquee__logo" src="assets/img/customer-cobblestone.png" alt="Cobblestone" />
+            <img class="marquee__logo" src="assets/img/customer-taurus.png" width="320" height="320" alt="Taurus Ejendomsforvaltning" />
+            <img class="marquee__logo" src="assets/img/customer-cobblestone.png" width="200" height="200" alt="Cobblestone" />
+            <img class="marquee__logo marquee__logo--tile" src="assets/img/customer-home-earth.jpg" width="200" height="200" alt="Home.Earth" />
           </div>
         </div>
       </div>
@@ -125,7 +126,7 @@
 
     <!-- ============ CUSTOM TEASER ============ -->
     <section class="section section--photo" id="custom">
-      <img class="sec-bg" src="assets/img/home-plan.jpg" alt="" aria-hidden="true" />
+      <img class="sec-bg" src="assets/img/home-plan.jpg" alt="" aria-hidden="true"  loading="lazy" decoding="async" />
       <span class="sec-overlay"></span>
       <div class="container">
         <div class="section-head" data-reveal style="max-width:680px">
@@ -143,7 +144,7 @@
 
     <!-- ============ ABOUT ============ -->
     <section class="section section--photo" id="about">
-      <img class="sec-bg" src="assets/img/home-build.jpg" alt="" aria-hidden="true" />
+      <img class="sec-bg" src="assets/img/home-build.jpg" alt="" aria-hidden="true"  loading="lazy" decoding="async" />
       <span class="sec-overlay"></span>
       <div class="container">
         <div class="split split--reverse">
@@ -212,7 +213,7 @@
 
     <!-- ============ CONTACT ============ -->
     <section class="section section--photo" id="contact">
-      <img class="sec-bg" src="assets/img/home-site.jpg" alt="" aria-hidden="true" />
+      <img class="sec-bg" src="assets/img/home-site.jpg" alt="" aria-hidden="true"  loading="lazy" decoding="async" />
       <span class="sec-overlay"></span>
       <div class="container">
         <div class="section-head">
