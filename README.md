@@ -82,6 +82,7 @@ Run everything with `node tests/run-all.js` (needs only Node, no installs):
 - `tests/check-site.js`: JavaScript syntax, links and images on every page, one h1 per page, Danish/English translation parity, no em-dashes, deploy/ identical to the project, security headers configured.
 - `tests/test-notify.js`: 25 scenarios for the booking email function against a simulated Resend (recipients, Danish/English, failures, spam and abuse protection).
 - `tests/check-live.js` (separate, needs internet): compares the live website with deploy/ and probes the email function without sending any email. Run it after every Netlify upload.
+- `tests/check-infra.js` (separate, needs internet): health check of what the site depends on: the email DNS records (DKIM, sending records, DMARC), that company mail still goes to Simply.com and SPF is intact, the SSL certificate expiry, the www and http redirects, every URL in the sitemap. Run it now and then, and any time email behaves oddly.
 
 ## Notes
 - Logo is an inline SVG (brick mark + wordmark) so it recolors per theme and
