@@ -43,9 +43,9 @@ fi
 if ! git diff --cached --quiet; then
   n=$(git diff --cached --name-only | wc -l | tr -d ' ')
   files=$(git diff --cached --name-only | head -5 | tr '\n' ' ')
-  git commit -q -m "Auto-sync: $n file(s) changed ($files)
+  git commit -q -m "Auto-sync (${SYNC_SOURCE:-Claude session}): $n file(s) changed ($files)
 
-Saved automatically after a Claude session turn.
+Saved automatically (${SYNC_SOURCE:-Claude session}).
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" >/dev/null 2>&1 || say "Auto-sync: commit failed, changes are still saved locally."
 fi
